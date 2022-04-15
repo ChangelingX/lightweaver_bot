@@ -1,5 +1,6 @@
 import praw
 import sqlite3
+import poster
 
 def main():
     r = praw.Reddit("bot1")
@@ -17,6 +18,7 @@ def main():
             print(book)
             if book in submission.title.lower():
                 print(f"Keyword found in {submission.title} {submission.id}")
+                print(poster.get_book_db_entry(book))
             if book in submission.selftext.lower():
                 print(f"Keyword found in self text of {submission.title} {submission.id}")
             for comment in submission.comments:
