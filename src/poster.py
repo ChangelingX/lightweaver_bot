@@ -13,6 +13,14 @@ def get_book_db_entry(title: str) -> str:
                     "Desc:\t"+book_db_entry[5]+"\n"
     return book_db_entry
 
+def post_comment(type: int, id: str) -> None:
+    r = praw.Reddit("bot1")
+    if type == 0:
+         post_to_reply_to = r.submission(id=id)
+    if type == 1:
+        post_to_reply_to = r.comment(id=id)
+    print(post_to_reply_to)
+
 def main():
     print(get_book_db_entry("opening the hand of thought"))
 
