@@ -12,20 +12,20 @@ def main():
     books = cur.fetchall()
 
     for submission in subreddit.top("all"):
-        print(submission.title)
+        #print(submission.title)
         for book in books:
             book = str(book[0]).lower()
-            print(book)
+            #print(book)
             if book in submission.title.lower():
-                print(f"Keyword found in {submission.title} {submission.id}")
-                poster.post_comment(0,submission.id)
+                #print(f"Keyword found in {submission.title} {submission.id}")
+                poster.post_comment(0,submission.id, book)
             if book in submission.selftext.lower():
-                print(f"Keyword found in self text of {submission.title} {submission.id}")
-                poster.post_comment(0,submission.id)
+                #print(f"Keyword found in self text of {submission.title} {submission.id}")
+                poster.post_comment(0,submission.id, book)
             for comment in submission.comments:
                 if book in comment.body.lower():
-                    print(f"Keyword found in comment {comment.body} {comment.id} of submission {submission.title} {submission.id}")
-                    poster.post_comment(1 ,comment.id)
+                    #print(f"Keyword found in comment {comment.body} {comment.id} of submission {submission.title} {submission.id}")
+                    poster.post_comment(1 ,comment.id, book)
 
 if __name__ == '__main__':
     main()
