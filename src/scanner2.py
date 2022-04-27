@@ -46,15 +46,39 @@ class Reddit_Scanner:
 
         :param entity: A reddit comment or submission.
         :returns: list[book1, book2, book3, ...]
-        :raises ValueError: If entity cannot be found or has already been replied to.
+        :raises ValueError: If entity is not a valid comment or submission.
         """
+        
         type_string, id = entity.fullname.split('_')
-        print(type_string, id)
-        if type_string == 't3':
-            print("submission")
-            print(entity.title, entity.selftext)
-        if type_string == 't1':
-            print("comment")
+        if type_string not in ['t1','t3']:
+            raise ValueError("Entity submitted is not a valid submission or comment.")
+
+        con = sqlite3.connect('lightweaver.db') #check if we have already replied to a given entity
+        cur = con.cursor()
+        cur.execute("SELECT reddit_id FROM replied_entries WHERE reddit_id = ?", [id])
+        already_replied = cur.fetchone()
+        if already_replied is not None:
+            return None
+
+        if entity.author == self.r.user.me(): #avoid replying to self
+            return None
+        
+        found_books = []
+        for book in self.books:
+            book = str(book[0]).lower() #sqlite3 returns a tuple, converting to string.
+
+            #submission
+            if type_string == 't3':
+                if book in entity.title.lower() or book in entity.selftext.lower():
+                    found_books.append(book)
+
+            #comment
+            if type_string == 't1':
+                if book in entity.body.lower():
+                    found_books.append(book)
+
+        found_books = list(dict.fromkeys(found_books)) #de-duplicate list
+        return found_books
 
 def main():
     rs = Reddit_Scanner()
@@ -66,8 +90,14 @@ def main():
      #At this point we have all of the submissions and their comments in the format 
      #dict[submission] = list[comments] 
 
-    rs.scan_entry(submissions[0])
-        
+    comments_to_post = {}
+    for submission in submissions:
+        comments_to_post[submission] = rs.scan_entry(submission)
+        print(submission, comments_to_post[submission])
+        for comment in comments[submission]:
+            comments_to_post[comment] = rs.scan_entry(comment)
+            print(comment, comments_to_post[comment])
+    print(comments_to_post)
 
 if __name__ == '__main__':
     main()
