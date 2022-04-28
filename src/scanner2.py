@@ -12,6 +12,8 @@ class Reddit_Scanner:
         cur.execute('SELECT title FROM books')
         self.books = cur.fetchall()
 
+    #TODO: get commentors on opt-in post.
+
     def get_submissions(self) -> list:
         """
         Iterates the submissions for assigned subreddits and returns a 
@@ -80,6 +82,78 @@ class Reddit_Scanner:
         found_books = list(dict.fromkeys(found_books)) #de-duplicate list
         return found_books
 
+
+    def post_comment(self, entity: object, books: list) -> None:
+        """
+        Accepts an entity to reply to and a list of books to post information for.
+        Posts the book information in a formatted block as a reply to the provided entity.
+
+        :param entity: the Reddit object to reply to (submission or comment)
+        :param books: a list of books as list[str]
+        :returns: None
+        :raises: Exception when post does not submit to reddit properly.
+
+        """
+        post_body = get_formatted_post_body(books)
+
+        posted_reply = entity.reply(post_body)
+
+        if posted_reply is None:
+            raise Exception("Unknown error has occurred while attempting to post reply.")
+        
+        #Creates entry in database to track replied posts.
+        con = sqlite3.connect('lightweaver.db')
+        cur = con.cursor()
+        cur.execute("SELECT MAX(id) FROM replied_entries")
+        max_id = cur.fetchone()
+        next_id = max_id[0] + 1
+        cur.execute("INSERT INTO replied_entries (id, reddit_id) VALUES (?, ?)", [next_id, entity.id])
+        con.commit()
+
+def get_formatted_post_body(books: list) -> str:
+    """
+    Accepts a list of books by title, formats them into a complete post body for a text post.
+    
+    :param books: list[str]
+    :returns: str
+    """
+    post_body = ""
+    header = "Hello, I am Lightweaver_bot. I post information on books mentioned in the parent comment or submission.\n\n"
+
+    for book in books:
+        post_body = "--------------------------------\n\n"+\
+            post_body + get_book_db_entry(book)
+
+    footer = "--------------------------------\n\n"+\
+             "Please DM this bot, the author, or post on /r/lightweaver_bot with any feedback or suggestions.\n"+\
+             "Author: /u/HoweveritHasToHappen\n\n"
+
+    post_body = header + post_body + footer
+    return post_body
+
+def get_book_db_entry(title: str) -> str:
+    """
+    Accepts a title of a book. Returns the database entry for that book in a formatted block.
+    
+    :param title: str
+    :returns: str
+    :raises KeyError: If title is not found in database.
+    """
+    con = sqlite3.connect('lightweaver.db')
+    cur = con.cursor()
+    cur.execute("SELECT * FROM books WHERE title =:title COLLATE NOCASE", {"title": title})
+    book_db_entry = cur.fetchone()
+
+    if book_db_entry is None:
+        raise KeyError("Title not found in database.")
+
+    book_db_entry = "Title:\t"+book_db_entry[1]+"\n\n"+\
+                    "Author:\t"+book_db_entry[2]+"\n\n"+\
+                    "ISBN:\t"+book_db_entry[3]+"\n\n"+\
+                    "URI:\t"+book_db_entry[4]+"\n\n"#+\
+                    #"Desc:\t"+book_db_entry[5]+"\n\n"
+    return book_db_entry
+
 def main():
     rs = Reddit_Scanner()
     submissions = rs.get_submissions()
@@ -97,7 +171,12 @@ def main():
         for comment in comments[submission]:
             comments_to_post[comment] = rs.scan_entry(comment)
             print(comment, comments_to_post[comment])
-    print(comments_to_post)
+    for key in comments_to_post.keys():
+        if comments_to_post[key] is None or len(comments_to_post[key]) == 0:
+            continue
+        print(f"Entity: {key}")
+        print(f"Hits: {comments_to_post[key]}")
+        rs.post_comment(key, comments_to_post[key])
 
 if __name__ == '__main__':
     main()
