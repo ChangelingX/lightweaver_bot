@@ -11,6 +11,8 @@ class Reddit_Scanner:
         cur = con.cursor()
         cur.execute('SELECT title FROM books')
         self.books = cur.fetchall()
+        cur.execute('SELECT reddit_username FROM opted_in_users')
+        self.opted_in_users = cur.fetchall()
 
     #TODO: get commentors on opt-in post.
 
@@ -40,7 +42,7 @@ class Reddit_Scanner:
             comments.append(comment)
         return comments
 
-    def scan_entry(self, entity: object) -> dict:
+    def scan_entity(self, entity: object) -> dict:
         """
         Scans a given entity (submission, comment) and detects book titles by name
         scans the title of submissions, and the body of submissions and comments
@@ -63,6 +65,9 @@ class Reddit_Scanner:
             return None
 
         if entity.author == self.r.user.me(): #avoid replying to self
+            return None
+
+        if entity.author not in self.opted_in_users: #Reply only to users who have opted into this bot.
             return None
         
         found_books = []
@@ -121,8 +126,7 @@ def get_formatted_post_body(books: list) -> str:
     header = "Hello, I am Lightweaver_bot. I post information on books mentioned in the parent comment or submission.\n\n"
 
     for book in books:
-        post_body = "--------------------------------\n\n"+\
-            post_body + get_book_db_entry(book)
+        post_body = post_body + "--------------------------------\n\n" + get_book_db_entry(book)
 
     footer = "--------------------------------\n\n"+\
              "Please DM this bot, the author, or post on /r/lightweaver_bot with any feedback or suggestions.\n"+\
@@ -166,10 +170,10 @@ def main():
 
     comments_to_post = {}
     for submission in submissions:
-        comments_to_post[submission] = rs.scan_entry(submission)
+        comments_to_post[submission] = rs.scan_entity(submission)
         print(submission, comments_to_post[submission])
         for comment in comments[submission]:
-            comments_to_post[comment] = rs.scan_entry(comment)
+            comments_to_post[comment] = rs.scan_entity(comment)
             print(comment, comments_to_post[comment])
     for key in comments_to_post.keys():
         if comments_to_post[key] is None or len(comments_to_post[key]) == 0:
