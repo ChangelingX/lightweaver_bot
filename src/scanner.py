@@ -1,12 +1,20 @@
-import praw
+import praw #type: ignore
+from praw.models import Submission
+from praw.models import Comment
 import sqlite3
 from typing import Union
 import typing
 
 class Reddit_Scanner:
-
+    """
+    This tool scrapes specific subreddits for mentions of specific books, 
+    and responds to those posts with basic information on the books.
+    """
     def __init__(self):
         self.r = praw.Reddit("bot1")
+        if not self.r.user.me():
+            raise Exception("Failed to authenticate to reddit servers.")
+
         self.subreddit = self.r.subreddit("lightweaver_bot")
 
         #generates list of books to search for.
@@ -22,7 +30,7 @@ class Reddit_Scanner:
         for user in temp_opted_in_users:
             self.opted_in_users.append(user[0])
 
-    def get_submissions(self) -> list:
+    def get_submissions(self) -> typing.List[Submission]:
         """
         Iterates the submissions for assigned subreddits and returns a 
         list of submissions as Reddit.submission objects.
@@ -34,7 +42,7 @@ class Reddit_Scanner:
             submissions.append(submission)
         return submissions
 
-    def get_comments(self, submission: Union[praw.reddit.submission, praw.reddit.comment]) -> typing.List[praw.Reddit.comment]:
+    def get_comments(self, submission: Union[Submission, Comment]) -> typing.List[Comment]:
         """
         Iterates the comments in a given submission and returns a 
         list of comments as Reddit.comment objects.
@@ -48,7 +56,7 @@ class Reddit_Scanner:
             comments.append(comment)
         return comments
 
-    def scan_entity(self, entity: Union[praw.reddit.submission, praw.reddit.comment]) -> Union[None, typing.List[praw.reddit.comment],typing.List[praw.reddit.submission]]:
+    def scan_entity(self, entity: Union[Submission, Comment]) -> Union[None, typing.List[Comment],typing.List[Submission]]:
         """
         Scans a given entity (submission, comment) and detects book titles by name
         scans the title of submissions, and the body of submissions and comments
@@ -95,7 +103,7 @@ class Reddit_Scanner:
         return found_books
 
 
-    def post_comment(self, entity: Union[praw.reddit.submission, praw.reddit.comment], books: list) -> None:
+    def post_comment(self, entity: Union[Submission, Comment], books: list) -> None:
         """
         Accepts an entity to reply to and a list of books to post information for.
         Posts the book information in a formatted block as a reply to the provided entity.
@@ -122,7 +130,7 @@ class Reddit_Scanner:
         cur.execute("INSERT INTO replied_entries (id, reddit_id) VALUES (?, ?)", [next_id, entity.id])
         con.commit()
 
-def get_formatted_post_body(books: list) -> str:
+def get_formatted_post_body(books: typing.List[str]) -> str:
     """
     Accepts a list of books by title, formats them into a complete post body for a text post.
     
@@ -152,7 +160,7 @@ def get_book_db_entry(title: str) -> str:
     """
     con = sqlite3.connect('lightweaver.db')
     cur = con.cursor()
-    cur.execute("SELECT * FROM books WHERE title =:title COLLATE NOCASE", {"title": title})
+    cur.execute("SELECT * FROM books WHERE title = (?) COLLATE NOCASE", (title))
     book_db_entry = cur.fetchone()
 
     if book_db_entry is None:
