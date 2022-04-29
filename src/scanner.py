@@ -1,6 +1,6 @@
 import praw #type: ignore
-from praw.models import Submission
-from praw.models import Comment
+from praw.models import Submission #type: ignore
+from praw.models import Comment #type: ignore
 import sqlite3
 from typing import Union
 import typing

@@ -1,3 +1,6 @@
 praw.ini
 lightweaver.db
 __pycache__
+.vscode
+.pytest_cache
+.mypy_cache
