@@ -1,5 +1,7 @@
 import praw
 import sqlite3
+from typing import Union
+import typing
 
 class Reddit_Scanner:
 
@@ -7,10 +9,13 @@ class Reddit_Scanner:
         self.r = praw.Reddit("bot1")
         self.subreddit = self.r.subreddit("lightweaver_bot")
 
+        #generates list of books to search for.
         con = sqlite3.connect('lightweaver.db')
         cur = con.cursor()
         cur.execute('SELECT title FROM books')
         self.books = cur.fetchall()
+
+        #generates list of users who have opted into replies
         cur.execute('SELECT reddit_username FROM opted_in_users')
         temp_opted_in_users = cur.fetchall()
         self.opted_in_users = []
@@ -29,12 +34,12 @@ class Reddit_Scanner:
             submissions.append(submission)
         return submissions
 
-    def get_comments(self, submission: object) -> list:
+    def get_comments(self, submission: Union[praw.reddit.submission, praw.reddit.comment]) -> typing.List[praw.Reddit.comment]:
         """
         Iterates the comments in a given submission and returns a 
         list of comments as Reddit.comment objects.
         
-        :returns: A dictionary of 
+        :returns: A list of reddit comment objects as list(Reddit.comment).
         :raises ValueError: If invalid submission is passed.
         """
         comments = []
@@ -43,7 +48,7 @@ class Reddit_Scanner:
             comments.append(comment)
         return comments
 
-    def scan_entity(self, entity: object) -> dict:
+    def scan_entity(self, entity: Union[praw.reddit.submission, praw.reddit.comment]) -> Union[None, typing.List[praw.reddit.comment],typing.List[praw.reddit.submission]]:
         """
         Scans a given entity (submission, comment) and detects book titles by name
         scans the title of submissions, and the body of submissions and comments
@@ -90,7 +95,7 @@ class Reddit_Scanner:
         return found_books
 
 
-    def post_comment(self, entity: object, books: list) -> None:
+    def post_comment(self, entity: Union[praw.reddit.submission, praw.reddit.comment], books: list) -> None:
         """
         Accepts an entity to reply to and a list of books to post information for.
         Posts the book information in a formatted block as a reply to the provided entity.
