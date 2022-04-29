@@ -12,9 +12,10 @@ class Reddit_Scanner:
         cur.execute('SELECT title FROM books')
         self.books = cur.fetchall()
         cur.execute('SELECT reddit_username FROM opted_in_users')
-        self.opted_in_users = cur.fetchall()
-
-    #TODO: get commentors on opt-in post.
+        temp_opted_in_users = cur.fetchall()
+        self.opted_in_users = []
+        for user in temp_opted_in_users:
+            self.opted_in_users.append(user[0])
 
     def get_submissions(self) -> list:
         """
@@ -24,7 +25,7 @@ class Reddit_Scanner:
         :returns: list[Reddit.submission]
         """
         submissions = []
-        for submission in self.subreddit.top("all"):
+        for submission in self.subreddit.new():
             submissions.append(submission)
         return submissions
 
@@ -67,6 +68,7 @@ class Reddit_Scanner:
         if entity.author == self.r.user.me(): #avoid replying to self
             return None
 
+        print(self.opted_in_users)
         if entity.author not in self.opted_in_users: #Reply only to users who have opted into this bot.
             return None
         
@@ -169,17 +171,22 @@ def main():
      #dict[submission] = list[comments] 
 
     comments_to_post = {}
+
+    #check for hits in the submissions
     for submission in submissions:
+        print(submission.title, submission.num_comments)
         comments_to_post[submission] = rs.scan_entity(submission)
-        print(submission, comments_to_post[submission])
+
+
+        #check for hits in the comments of each submission
         for comment in comments[submission]:
             comments_to_post[comment] = rs.scan_entity(comment)
-            print(comment, comments_to_post[comment])
+
+    #post reply for each hit found
     for key in comments_to_post.keys():
+        print(f"Hit found: Entity - {key} - Hit {comments_to_post[key]}")
         if comments_to_post[key] is None or len(comments_to_post[key]) == 0:
             continue
-        print(f"Entity: {key}")
-        print(f"Hits: {comments_to_post[key]}")
         rs.post_comment(key, comments_to_post[key])
 
 if __name__ == '__main__':
