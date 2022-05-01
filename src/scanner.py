@@ -1,34 +1,40 @@
 import praw #type: ignore
 from praw.models import Submission #type: ignore
 from praw.models import Comment #type: ignore
+from praw.models import Subreddit #type: ignore
 import sqlite3
 from typing import Union
 import typing
 
-class Reddit_Scanner:
+DATABASE='lightweaver.db'
+BOT_PRAW_NAME = 'lightweaver'
+SUBREDDITS = 'lightweaver_bot'
+
+class RedditScanner:
     """
     This tool scrapes specific subreddits for mentions of specific books, 
     and responds to those posts with basic information on the books.
     """
     def __init__(self):
-        self.r = praw.Reddit("bot1")
-        if not self.r.user.me():
-            raise Exception("Failed to authenticate to reddit servers.")
+        #These are all external dependencies.
+        self._reddit = None
+        self._books = None
+        self._opted_in_users = None
 
-        self.subreddit = self.r.subreddit("lightweaver_bot")
-
-        #generates list of books to search for.
-        con = sqlite3.connect('lightweaver.db')
-        cur = con.cursor()
-        cur.execute('SELECT title FROM books')
-        self.books = cur.fetchall()
-
-        #generates list of users who have opted into replies
-        cur.execute('SELECT reddit_username FROM opted_in_users')
-        temp_opted_in_users = cur.fetchall()
-        self.opted_in_users = []
-        for user in temp_opted_in_users:
-            self.opted_in_users.append(user[0])
+    def set_up_externals(self):
+        self.connect_to_reddit
+        self.books = get_books()
+        self.opted_in_users = get_opted_in_users()
+        
+    def get_subreddits(self) -> Subreddit:
+        """
+        Retrieves subreddit object from praw.
+        
+        :returns: Subreddit model
+        """
+        print(self.reddit)
+        subreddits = self.reddit.subreddit(SUBREDDITS)
+        return subreddits    
 
     def get_submissions(self) -> typing.List[Submission]:
         """
@@ -38,7 +44,8 @@ class Reddit_Scanner:
         :returns: list[Reddit.submission]
         """
         submissions = []
-        for submission in self.subreddit.new():
+        subreddits = self.get_subreddits()
+        for submission in subreddits.new():
             submissions.append(submission)
         return submissions
 
@@ -67,21 +74,20 @@ class Reddit_Scanner:
         :raises ValueError: If entity is not a valid comment or submission.
         """
         
-        type_string, id = entity.fullname.split('_')
+        type_string, reddit_id = entity.fullname.split('_')
         if type_string not in ['t1','t3']:
             raise ValueError("Entity submitted is not a valid submission or comment.")
 
-        con = sqlite3.connect('lightweaver.db') #check if we have already replied to a given entity
+        con = sqlite3.connect(DATABASE) #check if we have already replied to a given entity
         cur = con.cursor()
-        cur.execute("SELECT reddit_id FROM replied_entries WHERE reddit_id = ?", [id])
+        cur.execute("SELECT reddit_id FROM replied_entries WHERE reddit_id = ?", [reddit_id])
         already_replied = cur.fetchone()
         if already_replied is not None:
             return None
 
-        if entity.author == self.r.user.me(): #avoid replying to self
+        if entity.author == self.reddit.user.me(): #avoid replying to self
             return None
 
-        print(self.opted_in_users)
         if entity.author not in self.opted_in_users: #Reply only to users who have opted into this bot.
             return None
         
@@ -102,7 +108,6 @@ class Reddit_Scanner:
         found_books = list(dict.fromkeys(found_books)) #de-duplicate list
         return found_books
 
-
     def post_comment(self, entity: Union[Submission, Comment], books: list) -> None:
         """
         Accepts an entity to reply to and a list of books to post information for.
@@ -122,13 +127,82 @@ class Reddit_Scanner:
             raise Exception("Unknown error has occurred while attempting to post reply.")
         
         #Creates entry in database to track replied posts.
-        con = sqlite3.connect('lightweaver.db')
+        con = sqlite3.connect(DATABASE)
         cur = con.cursor()
         cur.execute("SELECT MAX(id) FROM replied_entries")
         max_id = cur.fetchone()
         next_id = max_id[0] + 1
         cur.execute("INSERT INTO replied_entries (id, reddit_id) VALUES (?, ?)", [next_id, entity.id])
         con.commit()
+    
+    @property
+    def reddit(self):
+        return self._reddit
+
+    def connect_to_reddit(self, bot_identifier=BOT_PRAW_NAME):
+        reddit = praw.Reddit(bot_identifier)
+        if not reddit.user.me():
+            raise Exception("Failed to authenticate to Reddit.")
+        self._reddit = reddit
+
+    @property
+    def books(self):
+        return self.books
+
+    @books.setter
+    def books(self, books: typing.List[str]):
+        self._books = books
+
+    @property
+    def opted_in_users(self):
+        return self._opted_in_users
+
+    @opted_in_users.setter
+    def opted_in_users(self, users: typing.List[str]):
+        self._opted_in_users = users
+
+
+def get_books() -> typing.List[str]:
+    """
+    Connects to the sql database and returns the list of book titles to search for in reddit posts.
+
+    :returns: List of book titles as list[str]
+    """
+    con = sqlite3.connect(DATABASE)
+    cur = con.cursor()
+    cur.execute('SELECT title FROM books')
+    books = cur.fetchall()
+    books = list({str(books).lower()})
+    return books
+        
+def get_opted_in_users() -> typing.List[str]:
+    """
+    Connects to the sql database and returns a list of opted in users who wish to
+    receive repies from this bot.
+    
+    :returns: list of usernames as list[str]
+    """
+    con = sqlite3.connect(DATABASE)
+    cur = con.cursor()
+    cur.execute('SELECT reddit_username FROM opted_in_users')
+    temp_opted_in_users = cur.fetchall()
+    opted_in_users = []
+    for user in temp_opted_in_users:
+        opted_in_users.append(user[0])
+    return opted_in_users
+
+def get_reddit_instance() -> praw.Reddit:
+    """
+    Connects to reddit via PRAW and returns an instance of praw.Reddit.
+    Raises an exception if unable to connect.
+    
+    :raises: Exception "Failed to authenticate to reddit servers." if no user can be retrieved.
+    :returns: praw.Reddit
+    """
+    r = praw.Reddit(BOT_PRAW_NAME)
+    if not r.user.me():
+        raise Exception("Failed to authenticate to reddit servers.")
+    return r
 
 def get_formatted_post_body(books: typing.List[str]) -> str:
     """
@@ -158,7 +232,7 @@ def get_book_db_entry(title: str) -> str:
     :returns: str
     :raises KeyError: If title is not found in database.
     """
-    con = sqlite3.connect('lightweaver.db')
+    con = sqlite3.connect(DATABASE)
     cur = con.cursor()
     cur.execute("SELECT * FROM books WHERE title = (?) COLLATE NOCASE", (title))
     book_db_entry = cur.fetchone()
@@ -174,7 +248,8 @@ def get_book_db_entry(title: str) -> str:
     return book_db_entry
 
 def main():
-    rs = Reddit_Scanner()
+    rs = RedditScanner()
+    rs.set_up_externals()
     submissions = rs.get_submissions()
     comments = {}
     for submission in submissions:
