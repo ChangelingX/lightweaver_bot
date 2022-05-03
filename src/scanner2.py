@@ -57,7 +57,6 @@ class RedditScanner:
             comments.append(comment)
         return comments
 
-    #TODO: Scan_entity
     def scan_entity(self, entity: Union[Submission, Comment]) -> Union[None, typing.List[Comment],typing.List[Submission]]:
         """
         Scans a given entity (submission, comment) and detects book titles by name
