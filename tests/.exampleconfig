@@ -1,6 +1,0 @@
-[bot1]
-client_id = "testid"
-client_secret = "testsecret"
-user_agent = "testuseragent"
-username = "testusername"
-password = "testpassword"
