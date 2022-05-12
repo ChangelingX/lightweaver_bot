@@ -1,4 +1,5 @@
 praw.ini
+config.ini
 lightweaver.db
 __pycache__
 .vscode
