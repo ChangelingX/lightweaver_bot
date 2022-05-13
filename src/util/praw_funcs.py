@@ -1,4 +1,4 @@
-import praw # type: ignore
+import praw, prawcore # type: ignore
 
 def connect_to_reddit(client_id, client_secret, password, username, user_agent):
     ph = praw.Reddit(
@@ -25,10 +25,71 @@ def get_comments(submission):
     list of comments as Reddit.comment objects.
     
     :returns: A list of reddit comment objects as list(Reddit.comment).
-    :raises ValueError: If invalid submission is passed.
     """
     comments = []
     comment_forest = submission.comments
     for comment in comment_forest:
         comments.append(comment)
     return comments
+
+def scan_entity(entity, books, replied_entries, opted_in_users):
+    """
+    Scans a given entity (submission, comment) and detects book titles by name
+    scans the title of submissions, and the body of submissions and comments
+    returns a list of books to reply to a given entity with.
+    :param entity: A reddit comment or submission.
+    :returns: list[book1, book2, book3, ...]
+    :raises ValueError: If entity is not a valid comment or submission.
+    """
+    type_string, reddit_id = entity.fullname.split('_')
+    if type_string not in ['t1','t3']:
+        raise ValueError("Entity submitted is not a valid submission or comment.")
+
+    if reddit_id in replied_entries:
+        return []
+
+    if entity.author not in opted_in_users:
+        return []
+
+    found_books = []
+    for book in books:
+
+        #submission
+        if type_string == 't3':
+            if book in entity.title.lower() or book in entity.selftext.lower():
+                found_books.append(book)
+
+        #comment
+        if type_string == 't1':
+            if book in entity.body.lower():
+                found_books.append(book)
+
+    found_books = list({str(book).lower() for book in found_books}) #de-duplicate list.
+
+    return found_books
+
+
+def post_comment(self, entity, post_body: str) -> bool:
+    """
+    Accepts an entity to reply to and a list of books to post information for.
+    Posts the book information in a formatted block as a reply to the provided entity.
+    :param entity: the Reddit object to reply to (submission or comment)
+    :param books: a list of books as list[str]
+    :returns: True if comment successfully posted, otherwise False.
+    :raises: Exception when post does not submit to reddit properly.
+    """
+    try:
+        result = entity.reply(post_body)        
+    except prawcore.exceptions.Forbidden as prawForbidden:
+        #Replying to a locked or otherwise non-repliable post.
+        return False
+
+    if result is None:
+        # posting to a non-opted in, quarantined sub
+        comment = self.reddit.user.me().comments.new(limit=1)[0] # get most recent comment
+        if comment.parent_id != entity.fullname: #check if the parent of most recent comment is the post just replied to
+            return False
+        else:
+            return True
+
+    return True

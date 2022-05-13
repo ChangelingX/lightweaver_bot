@@ -25,12 +25,18 @@ class MockReddit:
     def setup_reddit(self):
         subreddit1 = MockSubreddit('mock_subreddit1')
         subreddit2 = MockSubreddit('mock_subreddit2')
-        subreddit3 = MockSubreddit('mock_subreddit3')
+        subreddit3 = MockSubreddit('quarantined_subreddit', quarantined=True)
 
-        sr1_sub1 = MockSubmission('t3_s1')
-        sr1_sub2 = MockSubmission('t3_s2')
-        sr2_sub1 = MockSubmission('t3_s3')
-        sr3_sub1 = MockSubmission('t3_s4')
+        sr1_sub1 = MockSubmission('t3_s1', 'test_author1', 'title', 'selftext')
+        sr1_sub2 = MockSubmission('t3_s2', 'test_author1', 'title', 'selftext')
+        sr2_sub1 = MockSubmission('t3_s3', 'test_author1', 'Locked Submission', 'selftext', locked=True)
+        sr3_sub1 = MockSubmission('t3_s4', 'test_author1', 'title', 'selftext')
+
+        sr1_sub1_c1 = MockComment('t1_c1', 'test_author1', 'book1')
+        sr1_sub1_c2 = MockComment('t1_c2', 'test_author1', 'hello')
+
+        sr1_sub1.add_comment(sr1_sub1_c1)
+        sr1_sub1.add_comment(sr1_sub1_c2)
 
         subreddit1.add_submission(sr1_sub1)
         subreddit1.add_submission(sr1_sub2)
@@ -80,9 +86,10 @@ class MockSubredditForest:
         return submissions_to_return
 
 class MockSubreddit:
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, name, quarantined=False, *args, **kwargs):
         self._submissions = []
         self.name = name
+        self._quarantined = quarantined
 
     def add_submission(self, submission):
         if not isinstance(submission, MockSubmission):
@@ -93,9 +100,24 @@ class MockSubreddit:
     def new(self, limit=100):
         return self._submissions[:limit]
 
+    def __repr__(self):
+        return self.name
+
+    def __str__(self) -> str:
+        return f"Subreddit: {self.name}\nQuarantined: {self.quarantined}"
+        
+    @property
+    def quarantined(self) -> bool:
+        return self._quarantined
+
 class MockSubmission:
-    def __init__(self, fullname: str, *args, **kwargs):
+    def __init__(self, fullname: str, author, title, selftext, locked=False, *args, **kwargs):
         self._fullname = fullname
+        self._author = author
+        self._title = title
+        self._selftext = selftext
+        self._locked = locked
+        self._comments = MockCommentForest()
 
     def __eq__(self, other):
         return self.fullname == other.fullname
@@ -103,9 +125,35 @@ class MockSubmission:
     def __repr__(self):
         return self.fullname
 
+    def __str__(self):
+        return f"Fullname: {self.fullname}\nAuthor:{self.author}\nTitle:{self.title}\nSelftext:{self.selftext}\nLocked:{self.locked}"
+
+    def add_comment(self, comment):
+        self._comments.add_comment(comment)
+
+    @property
+    def comments(self):
+        return self._comments
+
     @property
     def fullname(self) -> str:
         return self._fullname
+
+    @property
+    def author(self) -> str:
+        return self._author
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @property
+    def selftext(self) -> str:
+        return self._selftext
+
+    @property
+    def locked(self) -> bool:
+        return self._locked
 
 class MockCommentForest:
     def __init__(self, comments=None, *args, **kwargs):
@@ -116,18 +164,42 @@ class MockCommentForest:
 
     def add_comment(self, comment):
         self._comments.append(comment)
+
+    def __iter__(self):
+        self.n = 0
+        return self
+
+    def __next__(self):
+        if self.n < len(self._comments):
+            result = self._comments[self.n]
+            self.n += 1
+            return result
+        else:
+            raise StopIteration
     
 class MockComment:
-    def __init__(self, fullname, body, *args, **kwargs):
+    def __init__(self, fullname, author, body, *args, **kwargs):
         self._fullname = fullname
         self._body = body
+        self._author = author
 
     def __eq__(self, other):
         return self.fullname == other.fullname
 
+    def __repr__(self):
+        return self.fullname
+
     @property
     def fullname(self):
         return self._fullname
+
+    @property
+    def author(self):
+        return self._author
+
+    @property
+    def body(self):
+        return self._body
 
 #### SQLITE MOCKS ####
 @pytest.fixture
