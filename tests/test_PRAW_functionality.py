@@ -1,6 +1,7 @@
 import pytest
+import prawcore # type: ignore
 import sqlite3
-from tests.conftest import MockComment, MockSubmission
+from tests.conftest import MockComment, MockSubmission # type: ignore
 from util.praw_funcs import connect_to_reddit, get_submissions, get_comments, scan_entity # type: ignore
 
 class Test_PRAWFunctionality:
@@ -25,9 +26,9 @@ class Test_PRAWFunctionality:
         p.setup_reddit()
         result = get_submissions(p, 'mock_subreddit1+mock_subreddit2')
         expected_result = [
-            MockSubmission('t3_s1', 'test_author1', 'title', 'selftext'),
-            MockSubmission('t3_s2', 'test_author1', 'title', 'selftext'),
-            MockSubmission('t3_s3', 'test_author1', 'title', 'selftext')
+            MockSubmission(p, None, 't3_s1', 'test_author1', 'title', 'selftext'),
+            MockSubmission(p, None, 't3_s2', 'test_author1', 'title', 'selftext'),
+            MockSubmission(p, None, 't3_s3', 'test_author1', 'title', 'selftext')
         ]
         assert result == expected_result
 
@@ -43,13 +44,13 @@ class Test_PRAWFunctionality:
         submission = p._subredditForest.subreddit()[0].new(limit=1)[0]
         result = get_comments(submission)
         expected_result = [
-            MockComment('t1_c1', 'test_author1', 'whatever'),
-            MockComment('t1_c2', 'test_author1', 'whatever')
+            MockComment(p, None, 't1_c1', 'test_author1', 'whatever'),
+            MockComment(p, None, 't1_c2', 'test_author1', 'whatever')
         ]
         assert expected_result == result
 
     def test_scan_entity_comment_single_valid_match(self):
-        entity = MockComment('t1_c1', 'test_author1', 'book1')
+        entity = MockComment(None, None, 't1_c1', 'test_author1', 'book1')
         books = ['book1']
         replied_entries = 't1_c2'
         opted_in_users = 'test_author1'
@@ -58,7 +59,7 @@ class Test_PRAWFunctionality:
         assert result == expected_result
 
     def test_scan_entity_comment_multiple_valid_match(self):
-        entity = MockComment('t1_c1', 'test_author1', 'book1 book2')
+        entity = MockComment(None, None, 't1_c1', 'test_author1', 'book1 book2')
         books = ['book1', 'book2']
         replied_entries = 't1_c2'
         opted_in_users = 'test_author1'
@@ -67,7 +68,7 @@ class Test_PRAWFunctionality:
         assert result == expected_result
 
     def test_scan_entity_comment_no_match(self):
-        entity = MockComment('t1_c1', 'test_author1', 'test')
+        entity = MockComment(None, None, 't1_c1', 'test_author1', 'test')
         books = ['book1', 'book2']
         replied_entries = 't1_c2'
         opted_in_users = 'test_author1'
@@ -76,7 +77,7 @@ class Test_PRAWFunctionality:
         assert result == expected_result
 
     def test_scan_entity_submission_single_match_in_title(self):
-        entity = MockSubmission('t3_s1', 'test_author1', 'book1', 'selftext')
+        entity = MockSubmission(None, None, 't3_s1', 'test_author1', 'book1', 'selftext')
         books = ['book1', 'book2']
         replied_entries = 't1_c2'
         opted_in_users = 'test_author1'
@@ -85,7 +86,7 @@ class Test_PRAWFunctionality:
         assert result == expected_result
 
     def test_scan_entity_submission_multiple_match_in_title(self):
-        entity = MockSubmission('t3_s1', 'test_author1', 'book1 book2', 'selftext')
+        entity = MockSubmission(None, None, 't3_s1', 'test_author1', 'book1 book2', 'selftext')
         books = ['book1', 'book2']
         replied_entries = 't1_c2'
         opted_in_users = 'test_author1'
@@ -94,7 +95,7 @@ class Test_PRAWFunctionality:
         assert result == expected_result
 
     def test_scan_entity_submission_single_match_in_selftext(self):
-        entity = MockSubmission('t3_s1', 'test_author1', 'title', 'book1')
+        entity = MockSubmission(None, None, 't3_s1', 'test_author1', 'title', 'book1')
         books = ['book1', 'book2']
         replied_entries = 't1_c2'
         opted_in_users = 'test_author1'
@@ -103,7 +104,7 @@ class Test_PRAWFunctionality:
         assert result == expected_result
 
     def test_scan_entity_submission_multiple_match_in_selftext(self):
-        entity = MockSubmission('t3_s1', 'test_author1', 'title', 'book1 book2')
+        entity = MockSubmission(None, None, 't3_s1', 'test_author1', 'title', 'book1 book2')
         books = ['book1', 'book2']
         replied_entries = 't1_c2'
         opted_in_users = 'test_author1'
@@ -112,7 +113,7 @@ class Test_PRAWFunctionality:
         assert result == expected_result
 
     def test_scan_entity_submission_single_match_in_title_and_selftext(self):
-        entity = MockSubmission('t3_s1', 'test_author1', 'book1', 'book2')
+        entity = MockSubmission(None, None, 't3_s1', 'test_author1', 'book1', 'book2')
         books = ['book1', 'book2']
         replied_entries = 't1_c2'
         opted_in_users = 'test_author1'
@@ -121,7 +122,7 @@ class Test_PRAWFunctionality:
         assert result == expected_result
 
     def test_scan_entity_submission_multiple_match_in_title_and_selftext(self):
-        entity = MockSubmission('t3_s1', 'test_author1', 'book1 book2', 'book2')
+        entity = MockSubmission(None, None, 't3_s1', 'test_author1', 'book1 book2', 'book2')
         books = ['book1', 'book2']
         replied_entries = 't1_c2'
         opted_in_users = 'test_author1'
@@ -130,7 +131,7 @@ class Test_PRAWFunctionality:
         assert result == expected_result
 
     def test_scan_entity_submission_no_match(self):
-        entity = MockSubmission('t3_s1', 'test_author1', 'title', 'selftext')
+        entity = MockSubmission(None, None, 't3_s1', 'test_author1', 'title', 'selftext')
         books = ['book1', 'book2']
         replied_entries = 't1_c2'
         opted_in_users = 'test_author1'
@@ -139,7 +140,7 @@ class Test_PRAWFunctionality:
         assert result == expected_result
     
     def test_scan_entity_already_replied(self):
-        entity = MockSubmission('t3_s1', 'test_author1', 'book1 book2', 'book2')
+        entity = MockSubmission(None, None, 't3_s1', 'test_author1', 'book1 book2', 'book2')
         books = ['book1', 'book2']
         replied_entries = 't3_s1'
         opted_in_users = 'test_author1'
@@ -148,7 +149,7 @@ class Test_PRAWFunctionality:
         assert result == expected_result
 
     def test_scan_entity_author_not_opted_in(self):
-        entity = MockSubmission('t3_s1', 'test_author2', 'title', 'selftext')
+        entity = MockSubmission(None, None, 't3_s1', 'test_author2', 'title', 'selftext')
         books = ['book1', 'book2']
         replied_entries = 't1_c2'
         opted_in_users = 'test_author1'
@@ -157,7 +158,20 @@ class Test_PRAWFunctionality:
         assert result == expected_result
 
     def test_post_comment_success(self, mock_reddit):
-        pass
+        p = connect_to_reddit(
+            'test_client_id',
+            'test_client_secret',
+            'test_password',
+            'test_username',
+            'test_user_agent'
+        )
+        p.setup_reddit()
+        subreddit = p._subredditForest.subreddit("mock_subreddit1")._subreddits[0]
+        submission = subreddit.new(limit=1)[0]
+        comment = get_comments(submission)[0]
+        result = comment.reply("this is a new comment")
+        expected_result = MockComment(None, None, 't1_c5', None, None)
+        assert result == expected_result
 
     def test_post_comment_locked_post(self, mock_reddit):
         p = connect_to_reddit(
@@ -170,11 +184,10 @@ class Test_PRAWFunctionality:
         p.setup_reddit()
         subreddit = p._subredditForest.subreddit("mock_subreddit2")._subreddits[0]
         submission = subreddit.new(limit=1)[0]
-        print(f"\n------------\n{subreddit.__str__()}\n------------")
-        print(f"{submission.__str__()}\n")
-        result = get_comments(submission)
-        print(result)
-
+        comment = get_comments(submission)[0]
+        with pytest.raises(prawcore.exceptions.Forbidden) as context:
+            result = comment.reply("this is a new comment")
+        
     def test_post_comment_quarantined_subreddit(self, mock_reddit):
         p = connect_to_reddit(
             'test_client_id',
@@ -186,8 +199,8 @@ class Test_PRAWFunctionality:
         p.setup_reddit()
         subreddit = p._subredditForest.subreddit("quarantined_subreddit")._subreddits[0]
         submission = subreddit.new(limit=1)[0]
-        print(f"\n------------\n{subreddit.__str__()}\n------------")
-        print(f"{submission.__str__()}\n")
-        result = get_comments(submission)
-        print(result)
+        comment = get_comments(submission)[0]
+        result = comment.reply("this is a new comment")
+        expected_result = None
+        assert result is expected_result
 
