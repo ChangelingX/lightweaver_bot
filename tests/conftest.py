@@ -1,5 +1,5 @@
 import re
-import praw # type: ignore
+import praw, prawcore # type: ignore
 import pytest
 import sqlite3
 import os
@@ -19,24 +19,28 @@ def mock_reddit(monkeysession):
 
 class MockReddit:
     def __init__(self, *args, **kwargs):
-        self.user = kwargs['username']
-        self._subredditForest = MockSubredditForest()
+        self.user = MockRedditor(self, kwargs['username'])
+        self._subredditForest = MockSubredditForest(self)
 
     def setup_reddit(self):
-        subreddit1 = MockSubreddit('mock_subreddit1')
-        subreddit2 = MockSubreddit('mock_subreddit2')
-        subreddit3 = MockSubreddit('quarantined_subreddit', quarantined=True)
+        subreddit1 = MockSubreddit(self, 'mock_subreddit1')
+        subreddit2 = MockSubreddit(self, 'mock_subreddit2')
+        subreddit3 = MockSubreddit(self, 'quarantined_subreddit', quarantined=True)
 
-        sr1_sub1 = MockSubmission('t3_s1', 'test_author1', 'title', 'selftext')
-        sr1_sub2 = MockSubmission('t3_s2', 'test_author1', 'title', 'selftext')
-        sr2_sub1 = MockSubmission('t3_s3', 'test_author1', 'Locked Submission', 'selftext', locked=True)
-        sr3_sub1 = MockSubmission('t3_s4', 'test_author1', 'title', 'selftext')
+        sr1_sub1 = MockSubmission(self, subreddit1, 't3_s1', 'test_author1', 'title', 'selftext')
+        sr1_sub2 = MockSubmission(self, subreddit1, 't3_s2', 'test_author1', 'title', 'selftext')
+        sr2_sub1 = MockSubmission(self, subreddit2, 't3_s3', 'test_author1', 'Locked Submission', 'selftext', locked=True)
+        sr3_sub1 = MockSubmission(self, subreddit3, 't3_s4', 'test_author1', 'title', 'selftext')
 
-        sr1_sub1_c1 = MockComment('t1_c1', 'test_author1', 'book1')
-        sr1_sub1_c2 = MockComment('t1_c2', 'test_author1', 'hello')
+        sr1_sub1_c1 = MockComment(self, sr1_sub1, 't1_c1', 'test_author1', 'book1')
+        sr1_sub1_c2 = MockComment(self, sr1_sub1, 't1_c2', 'test_author1', 'hello')
+        sr2_sub1_c1 = MockComment(self, sr2_sub1, 't1_c3', 'test_author1', 'book1 locked_submission')
+        sr3_sub1_c1 = MockComment(self, sr3_sub1, 't1_c4', 'test_author1', 'book1 quarantined subreddit')
 
         sr1_sub1.add_comment(sr1_sub1_c1)
         sr1_sub1.add_comment(sr1_sub1_c2)
+        sr2_sub1.add_comment(sr2_sub1_c1)
+        sr3_sub1.add_comment(sr3_sub1_c1)
 
         subreddit1.add_submission(sr1_sub1)
         subreddit1.add_submission(sr1_sub2)
@@ -51,7 +55,8 @@ class MockReddit:
         return self._subredditForest.subreddit(subreddits)
 
 class MockSubredditForest:
-    def __init__(self, subreddits=None, *args, **kwargs):
+    def __init__(self, reddit, subreddits=None, *args, **kwargs):
+        self._reddit = reddit
         if subreddits is None:
             self._subreddits = []
         else:
@@ -66,7 +71,7 @@ class MockSubredditForest:
             if subreddit.name in subs_to_return:
                 returned_subs.append(subreddit)
         
-        return MockSubredditForest(returned_subs)
+        return MockSubredditForest(self.reddit, returned_subs)
 
     def add_subreddit(self, subreddit):
         if not isinstance(subreddit, MockSubreddit):
@@ -85,8 +90,13 @@ class MockSubredditForest:
                     return submissions_to_return
         return submissions_to_return
 
+    @property
+    def reddit(self):
+        return self._reddit
+
 class MockSubreddit:
-    def __init__(self, name, quarantined=False, *args, **kwargs):
+    def __init__(self, reddit, name, quarantined=False, *args, **kwargs):
+        self._reddit = reddit
         self._submissions = []
         self.name = name
         self._quarantined = quarantined
@@ -110,14 +120,20 @@ class MockSubreddit:
     def quarantined(self) -> bool:
         return self._quarantined
 
+    @property
+    def reddit(self):
+        return self._reddit
+
 class MockSubmission:
-    def __init__(self, fullname: str, author, title, selftext, locked=False, *args, **kwargs):
+    def __init__(self, reddit, parent, fullname: str, author, title, selftext, locked=False, *args, **kwargs):
+        self._reddit = reddit
+        self._parent = parent
         self._fullname = fullname
         self._author = author
         self._title = title
         self._selftext = selftext
         self._locked = locked
-        self._comments = MockCommentForest()
+        self._comments = MockCommentForest(self.reddit, self)
 
     def __eq__(self, other):
         return self.fullname == other.fullname
@@ -155,8 +171,18 @@ class MockSubmission:
     def locked(self) -> bool:
         return self._locked
 
+    @property
+    def reddit(self):
+        return self._reddit
+
+    @property
+    def parent(self):
+        return self._parent
+
 class MockCommentForest:
-    def __init__(self, comments=None, *args, **kwargs):
+    def __init__(self, reddit, parent, comments=None, *args, **kwargs):
+        self._reddit = reddit
+        self._parent = parent
         if comments is None:
             self._comments = []
         else:
@@ -176,18 +202,67 @@ class MockCommentForest:
             return result
         else:
             raise StopIteration
-    
+
+    def new(self, limit=100):
+        comments_to_return = []
+        i = 0
+        for comment in self._comments:
+            if i < limit and i < len(self._comments):
+                comments_to_return.append(comment)
+                i += 1
+
+        return comments_to_return
+
+    @property
+    def reddit(self):
+        return self._reddit
+
+    @property
+    def parent(self):
+        return self._parent
+
 class MockComment:
-    def __init__(self, fullname, author, body, *args, **kwargs):
+    def __init__(self, reddit, parent, fullname, author, body, *args, **kwargs):
+        self._reddit = reddit
+        self._parent = parent
         self._fullname = fullname
         self._body = body
         self._author = author
+        self._replies = MockCommentForest(self.reddit, self)
 
     def __eq__(self, other):
         return self.fullname == other.fullname
 
     def __repr__(self):
         return self.fullname
+
+    def reply(self, reply_body):
+
+        # recurse parent until we get to the submission.
+        parent_type = self.parent.fullname.split("_")[0]
+        top_level_parent = self.parent
+        while parent_type != 't3':
+            top_level_parent = self.parent.parent
+            parent_type = parent_type = self.parent.fullname.split("_")[0]
+
+        #parent is submission
+        if  parent_type == 't3':
+            #parent submission is locked.
+            if top_level_parent.locked == True:
+                class MockResponse():
+                    def __init__(self, status_code):
+                        self.status_code = status_code
+                raise prawcore.exceptions.Forbidden(MockResponse(403))
+
+        comment = MockComment(self.reddit, self, 't1_c5', self.reddit.user.me(), reply_body)
+        self._replies.add_comment(comment)
+        self.reddit.user.add_comment(comment)
+
+        #Do not return comment if replying to quarantined subreddit.
+        if top_level_parent.parent.quarantined == True:
+            return None
+        
+        return comment
 
     @property
     def fullname(self):
@@ -200,6 +275,38 @@ class MockComment:
     @property
     def body(self):
         return self._body
+
+    @property
+    def reddit(self):
+        return self._reddit
+
+    @property
+    def parent(self):
+        return self._parent
+
+
+class MockRedditor:
+    def __init__(self, reddit, username):
+        self._reddit = reddit
+        self._username = username
+        self._comments = MockCommentForest(reddit, self)
+
+    def me(self):
+        return self
+    
+    def __repr__(self):
+        return self._username
+
+    def add_comment(self, comment):
+        self._comments.add_comment(comment)
+
+    @property
+    def comments(self):
+        return self._comments
+    
+    @property
+    def reddit(self):
+        return self._reddit
 
 #### SQLITE MOCKS ####
 @pytest.fixture
