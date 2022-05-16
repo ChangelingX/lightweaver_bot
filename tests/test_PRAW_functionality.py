@@ -201,6 +201,8 @@ class Test_PRAWFunctionality:
         submission = subreddit.new(limit=1)[0]
         comment = get_comments(submission)[0]
         result = comment.reply("this is a new comment")
+        expected_comment = MockComment(None, None, 't1_c5', None, None)
         expected_result = None
         assert result is expected_result
+        assert expected_comment in p.user.comments
 
