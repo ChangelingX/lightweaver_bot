@@ -1,3 +1,4 @@
+import configparser
 import re
 import praw, prawcore # type: ignore
 import pytest
@@ -53,6 +54,10 @@ class MockReddit:
 
     def subreddit(self, subreddits=''):
         return self._subredditForest.subreddit(subreddits)
+
+    def __eq__(self, other):
+        if isinstance(other, MockReddit):
+            return True
 
 class MockSubredditForest:
     def __init__(self, reddit, subreddits=None, *args, **kwargs):
@@ -338,3 +343,28 @@ def setup_test_db():
     cur.execute('INSERT INTO replied_entries (reddit_id) VALUES (?)',("t1_c1",))
     cur.execute('INSERT INTO replied_entries (reddit_id) VALUES (?)',("t3_s1",))
     cur.connection.commit()
+
+#### CONFIGPARSER MOCKS ####
+@pytest.fixture
+def amend_configparser_read(mocker):
+    original_func = configparser.ConfigParser.read
+
+    def updated_func(self, filenames, *args, **kwargs):
+        if filenames == './path':
+            return original_func(self, './tests/example_config.ini')
+        return original_func(self, filenames, *args, **kwargs)
+    
+    mocker.patch('configparser.ConfigParser.read', new=updated_func)
+
+#### OS MOCKS ##
+@pytest.fixture
+def amend_os_path_isfile(mocker):
+    original_func = os.path.isfile
+
+    def updated_func(path, *args, **kwargs):
+        if path == './path':
+            return True
+        
+        return original_func(path, *args, **kwargs)
+    
+    mocker.patch('os.path.isfile', new=updated_func)
