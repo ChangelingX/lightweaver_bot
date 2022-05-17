@@ -2,7 +2,7 @@ from configparser import ConfigParser, NoSectionError
 from logging import exception
 import os
 import sqlite3
-import praw
+import praw # type: ignore
 from util.praw_funcs import connect_to_reddit # type: ignore
 from util.sql_funcs import get_sql_cursor # type: ignore
 
