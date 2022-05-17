@@ -8,7 +8,7 @@ class Test_BotFunctionality:
     def test_scan_config_file(self, amend_configparser_read, amend_os_path_isfile):
         rb = RedditScanAndReplyBot.from_file('./path')
         result = rb.configs
-        expected_result = {'DATABASE': {'database_name': "'./tests/test.db'"}, 'PRAW': {'client_id': "'test_client_id'", 'client_secret': "'test_client_secret'", 'password': "'test_password'", 'username': "'test_username'", 'user_agent': "'test_user_agent'"}}
+        expected_result = {'DATABASE': {'database_name': "./tests/test.db"}, 'PRAW': {'client_id': "test_client_id", 'client_secret': "test_client_secret", 'password': "test_password", 'username': "test_username", 'user_agent': "test_user_agent"}}
         assert result == expected_result
 
     def test_scan_config_invalid_file_bad_PRAW_section(self):
@@ -64,3 +64,38 @@ class Test_BotFunctionality:
         rb = RedditScanAndReplyBot()
         with pytest.raises(Exception) as context:
             rb.reddit
+
+    def test_setup(self, mock_reddit, amend_configparser_read, amend_sqlite3_connect):
+        rb = RedditScanAndReplyBot.from_file('./path')
+        rb.setup()
+
+    def test_setup_missing_database_config(self, amend_configparser_read):
+        rb = RedditScanAndReplyBot()
+        rb._praw_config = {
+            'client_id' : 'test_client_id',
+            'client_secret': 'test_client_secret',
+            'password':'test_password',
+            'username':'test_username',
+            'user_agent':'test_user_agent'
+            }
+        with pytest.raises(Exception) as context:
+            rb.setup()
+
+    def test_setup_missing_praw_config(self):
+        rb = RedditScanAndReplyBot()
+        rb._database_config = {'DATABASE':{'database_name':'./path'}}
+        with pytest.raises(Exception) as context:
+            rb.setup()
+
+    def test_setup_malformed_praw_config(self):
+        rb = RedditScanAndReplyBot()
+        rb._praw_config = {
+            'client_id' : 'test_client_id',
+            'missing_section': 'test_client_secret',
+            'password':'test_password',
+            'username':'test_username',
+            'user_agent':'test_user_agent'
+            }
+        rb._database_config = {'DATABASE':{'database_name':'./path'}}
+        with pytest.raises(Exception) as context:
+            rb.setup()

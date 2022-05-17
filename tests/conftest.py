@@ -320,7 +320,7 @@ def amend_sqlite3_connect(mocker):
 
     def updated_func(db_name, *args, **kwargs):
         if db_name == './path' or (db_name == 'file:./path?mode=rw' and kwargs['uri'] == True):
-            return original_func("file:./tests/test.db?mode=rw")
+            return original_func("file:./tests/test.db?mode=rw", uri=True)
 
         return original_func(db_name, *args, **kwargs)
     

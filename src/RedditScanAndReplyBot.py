@@ -38,6 +38,16 @@ class RedditScanAndReplyBot:
         self._cursor = None
         self._reddit = None
 
+    def setup(self):
+        if self.configs['DATABASE']['database_name'] is None:
+            raise Exception("No database name specified. Cannot connect to database.")
+        
+        if self.configs['PRAW'] is None:
+            raise Exception("No PRAW configuration specified. Cannot connect to Reddit.")
+        
+        self.cur = self.configs['DATABASE']['database_name']
+        self.reddit = self.configs['PRAW']
+
     def __repr__(self):
         as_string = f"Database Config: {self._database_config}\nReddit Config: {self._praw_config}"
         return as_string
@@ -57,6 +67,8 @@ class RedditScanAndReplyBot:
 
     @reddit.setter
     def reddit(self, reddit_config: dict):
+        if not {'client_id','client_secret','password','username','user_agent'}.issubset(reddit_config):
+            raise Exception("Reddit config missing required fields. Check config file.")
         self._reddit = connect_to_reddit(
             reddit_config['client_id'], 
             reddit_config['client_secret'], 
