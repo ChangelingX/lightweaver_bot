@@ -2,7 +2,7 @@ import pytest
 import prawcore # type: ignore
 import sqlite3
 from tests.conftest import MockComment, MockSubmission # type: ignore
-from util.praw_funcs import connect_to_reddit, get_submissions, get_comments, scan_entity # type: ignore
+from util.praw_funcs import connect_to_reddit, get_submissions, get_comments, post_comment, scan_entity # type: ignore
 
 class Test_PRAWFunctionality:
     def test_connect_to_reddit(self, mock_reddit):
@@ -28,7 +28,8 @@ class Test_PRAWFunctionality:
         expected_result = [
             MockSubmission(p, None, 't3_s1', 'test_author1', 'title', 'selftext'),
             MockSubmission(p, None, 't3_s2', 'test_author1', 'title', 'selftext'),
-            MockSubmission(p, None, 't3_s3', 'test_author1', 'title', 'selftext')
+            MockSubmission(p, None, 't3_s3', 'test_author1', 'title', 'selftext'),
+            MockSubmission(p, None, 't3_s4', 'test_author1', 'title', 'selftext')
         ]
         assert result == expected_result
 
@@ -45,7 +46,8 @@ class Test_PRAWFunctionality:
         result = get_comments(submission)
         expected_result = [
             MockComment(p, None, 't1_c1', 'test_author1', 'whatever'),
-            MockComment(p, None, 't1_c2', 'test_author1', 'whatever')
+            MockComment(p, None, 't1_c2', 'test_author1', 'whatever'),
+            MockComment(p, None, 't1_c3', 'test_author1', 'whatever')
         ]
         assert expected_result == result
 
@@ -169,9 +171,11 @@ class Test_PRAWFunctionality:
         subreddit = p._subredditForest.subreddit("mock_subreddit1")._subreddits[0]
         submission = subreddit.new(limit=1)[0]
         comment = get_comments(submission)[0]
-        result = comment.reply("this is a new comment")
-        expected_result = MockComment(None, None, 't1_c5', None, None)
+        result = post_comment(p, comment, "this is a comment")
+        expected_result = True
+        expected_post = MockComment(None, None, 't1_c6', None, None)
         assert result == expected_result
+        assert expected_post in p.user.comments
 
     def test_post_comment_locked_post(self, mock_reddit):
         p = connect_to_reddit(
@@ -185,8 +189,9 @@ class Test_PRAWFunctionality:
         subreddit = p._subredditForest.subreddit("mock_subreddit2")._subreddits[0]
         submission = subreddit.new(limit=1)[0]
         comment = get_comments(submission)[0]
-        with pytest.raises(prawcore.exceptions.Forbidden) as context:
-            result = comment.reply("this is a new comment")
+        result = post_comment(p, comment, "this is a comment")
+        expected_result = False
+        assert result == expected_result
         
     def test_post_comment_quarantined_subreddit(self, mock_reddit):
         p = connect_to_reddit(
@@ -200,9 +205,9 @@ class Test_PRAWFunctionality:
         subreddit = p._subredditForest.subreddit("quarantined_subreddit")._subreddits[0]
         submission = subreddit.new(limit=1)[0]
         comment = get_comments(submission)[0]
-        result = comment.reply("this is a new comment")
-        expected_comment = MockComment(None, None, 't1_c5', None, None)
-        expected_result = None
+        result = post_comment(p, comment, "this is a comment")
+        expected_comment = MockComment(None, None, 't1_c6', None, None)
+        expected_result = True
         assert result is expected_result
         assert expected_comment in p.user.comments
 

@@ -69,7 +69,7 @@ def scan_entity(entity, books, replied_entries, opted_in_users):
     return found_books
 
 
-def post_comment(self, entity, post_body: str) -> bool:
+def post_comment(reddit, entity, post_body: str) -> bool:
     """
     Accepts an entity to reply to and a list of books to post information for.
     Posts the book information in a formatted block as a reply to the provided entity.
@@ -79,15 +79,15 @@ def post_comment(self, entity, post_body: str) -> bool:
     :raises: Exception when post does not submit to reddit properly.
     """
     try:
-        result = entity.reply(post_body)        
+        result = entity.reply(post_body)
     except prawcore.exceptions.Forbidden as prawForbidden:
         #Replying to a locked or otherwise non-repliable post.
         return False
 
     if result is None:
         # posting to a non-opted in, quarantined sub
-        comment = self.reddit.user.me().comments.new(limit=1)[0] # get most recent comment
-        if comment.parent_id != entity.fullname: #check if the parent of most recent comment is the post just replied to
+        last_posted_comment = reddit.user.me().comments.new(limit=1)[0] # get most recent comment
+        if last_posted_comment.parent_id != entity.fullname: #check if the parent of most recent comment is the post just replied to
             return False
         else:
             return True

@@ -22,29 +22,35 @@ class MockReddit:
     def __init__(self, *args, **kwargs):
         self.user = MockRedditor(self, kwargs['username'])
         self._subredditForest = MockSubredditForest(self)
+        self._next_comment_id = 't1_c1'
+        self._next_submission_id = 't3_s1'
 
     def setup_reddit(self):
         subreddit1 = MockSubreddit(self, 'mock_subreddit1')
         subreddit2 = MockSubreddit(self, 'mock_subreddit2')
         subreddit3 = MockSubreddit(self, 'quarantined_subreddit', quarantined=True)
 
-        sr1_sub1 = MockSubmission(self, subreddit1, 't3_s1', 'test_author1', 'title', 'selftext')
-        sr1_sub2 = MockSubmission(self, subreddit1, 't3_s2', 'test_author1', 'title', 'selftext')
-        sr2_sub1 = MockSubmission(self, subreddit2, 't3_s3', 'test_author1', 'Locked Submission', 'selftext', locked=True)
-        sr3_sub1 = MockSubmission(self, subreddit3, 't3_s4', 'test_author1', 'title', 'selftext')
+        sr1_sub1 = MockSubmission(self, subreddit1, self.next_submission_id, 'test_author1', 'title', 'selftext')
+        sr1_sub2 = MockSubmission(self, subreddit1, self.next_submission_id, 'test_author1', 'title', 'selftext')
+        sr1_sub3 = MockSubmission(self, subreddit1, self.next_submission_id, 'test_author1', 'book1', 'selftext')
+        sr2_sub1 = MockSubmission(self, subreddit2, self.next_submission_id, 'test_author1', 'Locked Submission', 'selftext', locked=True)
+        sr3_sub1 = MockSubmission(self, subreddit3, self.next_submission_id, 'test_author1', 'title', 'selftext')
 
-        sr1_sub1_c1 = MockComment(self, sr1_sub1, 't1_c1', 'test_author1', 'book1')
-        sr1_sub1_c2 = MockComment(self, sr1_sub1, 't1_c2', 'test_author1', 'hello')
-        sr2_sub1_c1 = MockComment(self, sr2_sub1, 't1_c3', 'test_author1', 'book1 locked_submission')
-        sr3_sub1_c1 = MockComment(self, sr3_sub1, 't1_c4', 'test_author1', 'book1 quarantined subreddit')
+        sr1_sub1_c1 = MockComment(self, sr1_sub1, self.next_comment_id, 'test_author1', 'book1')
+        sr1_sub1_c2 = MockComment(self, sr1_sub1, self.next_comment_id, 'test_author1', 'hello')
+        sr1_sub1_c3 = MockComment(self, sr1_sub1, self.next_comment_id, 'test_author1', 'book1')
+        sr2_sub1_c1 = MockComment(self, sr2_sub1, self.next_comment_id, 'test_author1', 'book1 locked_submission')
+        sr3_sub1_c1 = MockComment(self, sr3_sub1, self.next_comment_id, 'test_author1', 'book1 quarantined subreddit')
 
         sr1_sub1.add_comment(sr1_sub1_c1)
         sr1_sub1.add_comment(sr1_sub1_c2)
+        sr1_sub1.add_comment(sr1_sub1_c3)
         sr2_sub1.add_comment(sr2_sub1_c1)
         sr3_sub1.add_comment(sr3_sub1_c1)
 
         subreddit1.add_submission(sr1_sub1)
         subreddit1.add_submission(sr1_sub2)
+        subreddit1.add_submission(sr1_sub3)
         subreddit2.add_submission(sr2_sub1)
         subreddit3.add_submission(sr3_sub1)
 
@@ -58,6 +64,20 @@ class MockReddit:
     def __eq__(self, other):
         if isinstance(other, MockReddit):
             return True
+
+    @property
+    def next_comment_id(self):
+        current_comment_id = self._next_comment_id
+        next_comment_id_int = int(current_comment_id[4:])+1
+        self._next_comment_id = "t1_c"+str(next_comment_id_int)
+        return current_comment_id
+
+    @property
+    def next_submission_id(self):
+        current_submission_id = self._next_submission_id
+        next_submission_id_int = int(current_submission_id[4:])+1
+        self._next_submission_id = "t3_s"+str(next_submission_id_int)
+        return current_submission_id
 
 class MockSubredditForest:
     def __init__(self, reddit, subreddits=None, *args, **kwargs):
@@ -119,7 +139,10 @@ class MockSubreddit:
         return self.name
 
     def __str__(self) -> str:
-        return f"Subreddit: {self.name}\nQuarantined: {self.quarantined}"
+        as_string = "-------SUBMISSION-------\n"+\
+                    f"Submission: {self.name}\n"+\
+                    f"Quarantined: {self.quarantined}"
+        return as_string
         
     @property
     def quarantined(self) -> bool:
@@ -140,11 +163,42 @@ class MockSubmission:
         self._locked = locked
         self._comments = MockCommentForest(self.reddit, self)
 
+    def reply(self, reply_body):
+
+        # recurse parent until we get to the submission.
+        parent_type = self.fullname.split("_")[0]
+        top_level_parent = self
+        while parent_type != 't3':
+            top_level_parent = self.parent.parent
+            parent_type = parent_type = self.parent.fullname.split("_")[0]
+
+        #parent is submission
+        if  parent_type == 't3':
+            #parent submission is locked.
+            if top_level_parent.locked == True:
+                class MockResponse():
+                    def __init__(self, status_code):
+                        self.status_code = status_code
+                raise prawcore.exceptions.Forbidden(MockResponse(403))
+
+        comment = MockComment(self.reddit, self, 't1_c5', self.reddit.user.me(), reply_body)
+        self._comments.add_comment(comment)
+        self.reddit.user.add_comment(comment)
+
+        #Do not return comment if replying to quarantined subreddit.
+        if top_level_parent.parent.quarantined == True:
+            return None
+        
+        return comment
+
     def __eq__(self, other):
         return self.fullname == other.fullname
     
     def __repr__(self):
         return self.fullname
+
+    def __hash__(self):
+        return hash(repr(self))
 
     def __str__(self):
         return f"Fullname: {self.fullname}\nAuthor:{self.author}\nTitle:{self.title}\nSelftext:{self.selftext}\nLocked:{self.locked}"
@@ -211,7 +265,7 @@ class MockCommentForest:
     def new(self, limit=100):
         comments_to_return = []
         i = 0
-        for comment in self._comments:
+        for comment in sorted(self._comments, reverse=True):
             if i < limit and i < len(self._comments):
                 comments_to_return.append(comment)
                 i += 1
@@ -238,8 +292,24 @@ class MockComment:
     def __eq__(self, other):
         return self.fullname == other.fullname
 
+    def __lt__(self, other):
+        if self.fullname < other.fullname:
+            return True
+        return False
+
     def __repr__(self):
         return self.fullname
+
+    def __str__(self):
+        as_string = "-------COMMENT-------\n"+\
+                    f"Parent: {repr(self.parent)}\n"+\
+                    f"Fullname: {self.fullname}\n"+\
+                    f"Author: {self.author}\n"+\
+                    f"Body: {self.body}\n"
+        return as_string
+
+    def __hash__(self):
+        return hash(repr(self))
 
     def reply(self, reply_body):
 
@@ -259,7 +329,7 @@ class MockComment:
                         self.status_code = status_code
                 raise prawcore.exceptions.Forbidden(MockResponse(403))
 
-        comment = MockComment(self.reddit, self, 't1_c5', self.reddit.user.me(), reply_body)
+        comment = MockComment(self.reddit, self, self.reddit.next_comment_id, self.reddit.user.me(), reply_body)
         self._replies.add_comment(comment)
         self.reddit.user.add_comment(comment)
 
@@ -288,6 +358,10 @@ class MockComment:
     @property
     def parent(self):
         return self._parent
+
+    @property
+    def parent_id(self):
+        return self.parent.fullname
 
 
 class MockRedditor:
@@ -340,8 +414,8 @@ def setup_test_db():
     cur.execute('INSERT INTO books (title, author, isbn, uri, summary) VALUES (?,?,?,?,?)',('book3','author3','isbn3','url3','sum3'))
     cur.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)', ("test_author1",))
     cur.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)', ("test_author2",))
-    cur.execute('INSERT INTO replied_entries (reddit_id) VALUES (?)',("t1_c1",))
-    cur.execute('INSERT INTO replied_entries (reddit_id) VALUES (?)',("t3_s1",))
+    cur.execute('INSERT INTO replied_entries (reddit_id) VALUES (?)',("c1",))
+    cur.execute('INSERT INTO replied_entries (reddit_id) VALUES (?)',("s1",))
     cur.connection.commit()
 
 #### CONFIGPARSER MOCKS ####

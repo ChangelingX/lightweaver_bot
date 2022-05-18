@@ -48,7 +48,7 @@ class Test_SQL_functionality:
         conn = sqlite3.connect('./path')
         cur = conn.cursor()
         result = sorted(get_replied_entries(cur))
-        expected_result = sorted(['t1_c1', 't3_s1'])
+        expected_result = sorted(['c1', 's1'])
         assert result == expected_result
 
     @pytest.mark.usefixtures('setup_test_db')
@@ -57,7 +57,7 @@ class Test_SQL_functionality:
         cur = conn.cursor()
         update_replied_entries_table(cur, "t1_c2")
         result = sorted(get_replied_entries(cur))
-        expected_result = 't1_c2'
+        expected_result = 'c2'
         assert expected_result in result
 
     @pytest.mark.usefixtures('setup_test_db')

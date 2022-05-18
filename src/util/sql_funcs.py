@@ -81,11 +81,12 @@ def update_replied_entries_table(session, fullname: str) -> None:
     :param username: Reddit fullname (str)
     :raises ValueError: If post fullname is already in database.
     """
+    type_string, reddit_id = fullname.split('_')
     current_posts = get_replied_entries(session)
-    if fullname in current_posts:
-        raise ValueError("Post fullname is already in replied posts list. This should never happen. The application may have double posted.")
+    if reddit_id in current_posts:
+        raise ValueError("Post reddit_id is already in replied posts list. This should never happen. The application may have double posted.")
     else:
-        session.execute("INSERT INTO replied_entries (reddit_id) VALUES (?)", [fullname])
+        session.execute("INSERT INTO replied_entries (reddit_id) VALUES (?)", [reddit_id])
         session.connection.commit()
 
 def get_book_db_entry(session, title: str) -> dict:

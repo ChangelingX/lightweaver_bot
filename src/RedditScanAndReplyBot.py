@@ -3,8 +3,8 @@ from logging import exception
 import os
 import sqlite3
 import praw # type: ignore
-from util.praw_funcs import connect_to_reddit # type: ignore
-from util.sql_funcs import get_sql_cursor # type: ignore
+from util.praw_funcs import connect_to_reddit, get_comments, get_submissions, post_comment, scan_entity # type: ignore
+from util.sql_funcs import get_books, get_opted_in_users, get_replied_entries, get_sql_cursor # type: ignore
 
 class RedditScanAndReplyBot:
     """
@@ -12,8 +12,15 @@ class RedditScanAndReplyBot:
     """
     @classmethod
     def from_file(cls, init_file: str):
+        """
+        Reads in file from given location, parses out configurations and passes to init.
+        
+        :param init_file: str representation of file location.
+        :raises FileNotFoundError: If init file does not exist.
+        :raises Exception: If a section is not properly defined.
+        """
         if not os.path.isfile(init_file):
-            raise ValueError(f"Config file {init_file} not found.")
+            raise FileNotFoundError(f"Config file {init_file} not found.")
         
         parser = ConfigParser()
         parser.read(init_file)
@@ -39,6 +46,10 @@ class RedditScanAndReplyBot:
         self._reddit = None
 
     def setup(self):
+        """
+        Connects to SQL database and Reddit using pre-set configuration data.
+        :raises Exception: if database name not set or praw configuration not set.
+        """
         if self.configs['DATABASE']['database_name'] is None:
             raise Exception("No database name specified. Cannot connect to database.")
         
@@ -47,6 +58,47 @@ class RedditScanAndReplyBot:
         
         self.cur = self.configs['DATABASE']['database_name']
         self.reddit = self.configs['PRAW']
+
+    def  scrape_reddit(self):
+        """
+        Retrieves latest posts from tracked subreddits, scans them for keywords, and then posts the relevant replies.
+        """
+        submissions = get_submissions(self.reddit, self.configs['PRAW']['subreddits'])
+        comments = {}
+        books_to_post = {}
+        books = get_books(self.cur)
+        replied_entries = get_replied_entries(self.cur)
+        opted_in_users = get_opted_in_users(self.cur)
+
+        # scrape each submission title and selftext for hits, then scrape each reply within the submission.
+        for submission in submissions:
+            books_to_post[submission] = scan_entity(submission, books, replied_entries, opted_in_users)
+            comments[submission] = get_comments(submission)
+            for comment in comments[submission]:
+                books_to_post[comment] = scan_entity(comment, books, replied_entries, opted_in_users)
+
+        #For each hit, reply to the post with a formatted post body.
+        posted = {}
+        for reddit_post in books_to_post:
+            if books_to_post[reddit_post] is None or len(books_to_post[reddit_post]) == 0:
+                continue
+            post_body = self.get_formatted_post_body(books_to_post[reddit_post])
+            posted[reddit_post] = post_comment(self.reddit, reddit_post, post_body)
+
+        #for each  post, add to the list of posts that have been replied to.
+        for post in posted:
+            print(f"Replying to:\n{post}\nReply succeeded:{posted[post]}\n---------------------")
+
+    def get_formatted_post_body(self, books_to_post: list) -> str:
+        """
+        Takes a list of books to be posted.
+        Returns a Reddit Markdown formatted post body with book information and header/footer.
+        
+        :param books_to_post: list of books as string.
+        :returns: Formatted string representing post body to be posted as a reply on Reddit.
+        """
+
+        return str(books_to_post)
 
     def __repr__(self):
         as_string = f"Database Config: {self._database_config}\nReddit Config: {self._praw_config}"
@@ -67,7 +119,7 @@ class RedditScanAndReplyBot:
 
     @reddit.setter
     def reddit(self, reddit_config: dict):
-        if not {'client_id','client_secret','password','username','user_agent'}.issubset(reddit_config):
+        if not {'client_id','client_secret','password','username','user_agent','subreddits'}.issubset(reddit_config):
             raise Exception("Reddit config missing required fields. Check config file.")
         self._reddit = connect_to_reddit(
             reddit_config['client_id'], 

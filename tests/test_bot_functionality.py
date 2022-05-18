@@ -1,14 +1,26 @@
 import pytest
 import sqlite3 
 from RedditScanAndReplyBot import RedditScanAndReplyBot
-from conftest import MockReddit
+from conftest import MockComment, MockCommentForest, MockReddit
 
 class Test_BotFunctionality:
 
     def test_scan_config_file(self, amend_configparser_read, amend_os_path_isfile):
         rb = RedditScanAndReplyBot.from_file('./path')
         result = rb.configs
-        expected_result = {'DATABASE': {'database_name': "./tests/test.db"}, 'PRAW': {'client_id': "test_client_id", 'client_secret': "test_client_secret", 'password': "test_password", 'username': "test_username", 'user_agent': "test_user_agent"}}
+        expected_result = {
+            'DATABASE': {
+                'database_name': "./tests/test.db"
+            }, 
+            'PRAW': {
+                'client_id': "test_client_id", 
+                'client_secret': "test_client_secret", 
+                'password': "test_password", 
+                'username': "test_username", 
+                'user_agent': "test_user_agent",
+                'subreddits': "mock_subreddit1+mock_subreddit2+quarantined_subreddit"
+            }
+        }
         assert result == expected_result
 
     def test_scan_config_invalid_file_bad_PRAW_section(self):
@@ -55,7 +67,8 @@ class Test_BotFunctionality:
             'client_secret':'test_client_secret',
             'password':'test_password',
             'username':'test_username',
-            'user_agent':'test_user_agent'
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit'
         }
         rb.reddit = reddit_config
         assert isinstance(rb.reddit, MockReddit)
@@ -76,7 +89,8 @@ class Test_BotFunctionality:
             'client_secret': 'test_client_secret',
             'password':'test_password',
             'username':'test_username',
-            'user_agent':'test_user_agent'
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit'
             }
         with pytest.raises(Exception) as context:
             rb.setup()
@@ -94,8 +108,28 @@ class Test_BotFunctionality:
             'missing_section': 'test_client_secret',
             'password':'test_password',
             'username':'test_username',
-            'user_agent':'test_user_agent'
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit'
             }
         rb._database_config = {'DATABASE':{'database_name':'./path'}}
         with pytest.raises(Exception) as context:
             rb.setup()
+
+    def test_get_formatted_post_body(self, mock_reddit, amend_sqlite3_connect):
+        pass
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_scrape_reddit(self, mock_reddit, amend_sqlite3_connect):
+        rb = RedditScanAndReplyBot()
+        rb._praw_config = {
+            'client_id' : 'test_client_id',
+            'client_secret': 'test_client_secret',
+            'password':'test_password',
+            'username':'test_username',
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit'
+            }
+        rb._database_config = {'database_name':'./path'}
+        rb.setup()
+        rb.reddit.setup_reddit()
+        rb.scrape_reddit()
