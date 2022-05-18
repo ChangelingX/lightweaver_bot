@@ -407,15 +407,15 @@ def setup_test_db():
     conn = sqlite3.connect("./tests/test.db")
     cur = conn.cursor()
     cur.execute('CREATE TABLE books(id integer PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, author text NOT NULL, isbn text NOT NULL, uri text, summary text not null)')
-    cur.execute('CREATE TABLE replied_entries (id integer PRIMARY KEY AUTOINCREMENT, reddit_id TEXT NOT NULL)')
+    cur.execute('CREATE TABLE replied_entries (id integer PRIMARY KEY AUTOINCREMENT, reddit_id TEXT NOT NULL, reply_succeeded_bool integer NOT NULL)')
     cur.execute('CREATE TABLE opted_in_users (id integer PRIMARY KEY AUTOINCREMENT, reddit_username TEXT NOT NULL)')
     cur.execute('INSERT INTO books (title, author, isbn, uri, summary) VALUES (?,?,?,?,?)',('book1','author1','isbn1','url1','sum1'))
     cur.execute('INSERT INTO books (title, author, isbn, uri, summary) VALUES (?,?,?,?,?)',('book2','author2','isbn2','url2','sum2'))
     cur.execute('INSERT INTO books (title, author, isbn, uri, summary) VALUES (?,?,?,?,?)',('book3','author3','isbn3','url3','sum3'))
     cur.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)', ("test_author1",))
     cur.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)', ("test_author2",))
-    cur.execute('INSERT INTO replied_entries (reddit_id) VALUES (?)',("c1",))
-    cur.execute('INSERT INTO replied_entries (reddit_id) VALUES (?)',("s1",))
+    cur.execute('INSERT INTO replied_entries (reddit_id, reply_succeeded_bool) VALUES (?, ?)',("c1","1",))
+    cur.execute('INSERT INTO replied_entries (reddit_id, reply_succeeded_bool) VALUES (?, ?)',("s1","1",))
     cur.connection.commit()
 
 #### CONFIGPARSER MOCKS ####

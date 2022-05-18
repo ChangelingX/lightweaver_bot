@@ -55,7 +55,7 @@ class Test_SQL_functionality:
     def test_add_replied_post(self, amend_sqlite3_connect):
         conn = sqlite3.connect('./path')
         cur = conn.cursor()
-        update_replied_entries_table(cur, "t1_c2")
+        update_replied_entries_table(cur, "t1_c2", True)
         result = sorted(get_replied_entries(cur))
         expected_result = 'c2'
         assert expected_result in result
@@ -65,7 +65,7 @@ class Test_SQL_functionality:
         conn = sqlite3.connect('./path')
         cur = conn.cursor()
         with pytest.raises(ValueError) as context:
-            update_replied_entries_table(cur, "t1_c1")
+            update_replied_entries_table(cur, "t1_c1", True)
         
     def test_get_book_database_entry(self, amend_sqlite3_connect):
         conn = sqlite3.connect('./path')

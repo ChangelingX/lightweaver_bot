@@ -74,7 +74,7 @@ def get_replied_entries(session):
     already_replied = list({str(entry[0]) for entry in already_replied})
     return already_replied
 
-def update_replied_entries_table(session, fullname: str) -> None:
+def update_replied_entries_table(session, fullname: str, reply_succeeded: bool) -> None:
     """
     Takes a cursor and a reddit post fullname, adds that fullname to the opted in users table if not already present.
     :param session: Sqlite3.Cursor
@@ -86,7 +86,7 @@ def update_replied_entries_table(session, fullname: str) -> None:
     if reddit_id in current_posts:
         raise ValueError("Post reddit_id is already in replied posts list. This should never happen. The application may have double posted.")
     else:
-        session.execute("INSERT INTO replied_entries (reddit_id) VALUES (?)", [reddit_id])
+        session.execute("INSERT INTO replied_entries (reddit_id, reply_succeeded_bool) VALUES (?, ?)", [reddit_id, int(reply_succeeded)])
         session.connection.commit()
 
 def get_book_db_entry(session, title: str) -> dict:

@@ -18,7 +18,8 @@ class Test_BotFunctionality:
                 'password': "test_password", 
                 'username': "test_username", 
                 'user_agent': "test_user_agent",
-                'subreddits': "mock_subreddit1+mock_subreddit2+quarantined_subreddit"
+                'subreddits': "mock_subreddit1+mock_subreddit2+quarantined_subreddit",
+                'bot_subreddit': 'mock_botsubreddit'
             }
         }
         assert result == expected_result
@@ -115,21 +116,26 @@ class Test_BotFunctionality:
         with pytest.raises(Exception) as context:
             rb.setup()
 
-    def test_get_formatted_post_body(self, mock_reddit, amend_sqlite3_connect):
-        pass
-
     @pytest.mark.usefixtures("setup_test_db")
-    def test_scrape_reddit(self, mock_reddit, amend_sqlite3_connect):
-        rb = RedditScanAndReplyBot()
-        rb._praw_config = {
-            'client_id' : 'test_client_id',
-            'client_secret': 'test_client_secret',
-            'password':'test_password',
-            'username':'test_username',
-            'user_agent':'test_user_agent',
-            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit'
-            }
-        rb._database_config = {'database_name':'./path'}
+    def test_get_formatted_post_body(self, mock_reddit, amend_configparser_read, amend_sqlite3_connect):
+        rb = RedditScanAndReplyBot().from_file('./path')
         rb.setup()
-        rb.reddit.setup_reddit()
-        rb.scrape_reddit()
+        post_text = rb.get_formatted_post_body(['book1', 'book2'])
+        print(f"\npost body:\n{post_text}")
+
+    # @pytest.mark.usefixtures("setup_test_db")
+    # def test_scrape_reddit(self, mock_reddit, amend_sqlite3_connect):
+    #     rb = RedditScanAndReplyBot()
+    #     rb._praw_config = {
+    #         'client_id' : 'test_client_id',
+    #         'client_secret': 'test_client_secret',
+    #         'password':'test_password',
+    #         'username':'test_username',
+    #         'user_agent':'test_user_agent',
+    #         'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit'
+    #         }
+    #     rb._database_config = {'database_name':'./path'}
+    #     rb.setup()
+    #     rb.reddit.setup_reddit()
+    #     rb.scrape_reddit()
+    #     rb.scrape_reddit()

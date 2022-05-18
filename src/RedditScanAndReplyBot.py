@@ -1,10 +1,10 @@
 from configparser import ConfigParser, NoSectionError
-from logging import exception
 import os
 import sqlite3
+from time import sleep
 import praw # type: ignore
 from util.praw_funcs import connect_to_reddit, get_comments, get_submissions, post_comment, scan_entity # type: ignore
-from util.sql_funcs import get_books, get_opted_in_users, get_replied_entries, get_sql_cursor # type: ignore
+from util.sql_funcs import get_books, get_opted_in_users, get_replied_entries, get_sql_cursor, update_replied_entries_table # type: ignore
 
 class RedditScanAndReplyBot:
     """
@@ -62,7 +62,9 @@ class RedditScanAndReplyBot:
     def  scrape_reddit(self):
         """
         Retrieves latest posts from tracked subreddits, scans them for keywords, and then posts the relevant replies.
+        This is the main loop of this program.
         """
+
         submissions = get_submissions(self.reddit, self.configs['PRAW']['subreddits'])
         comments = {}
         books_to_post = {}
@@ -85,9 +87,14 @@ class RedditScanAndReplyBot:
             post_body = self.get_formatted_post_body(books_to_post[reddit_post])
             posted[reddit_post] = post_comment(self.reddit, reddit_post, post_body)
 
-        #for each  post, add to the list of posts that have been replied to.
+        #for each post, add to the list of posts that have been replied to.
         for post in posted:
-            print(f"Replying to:\n{post}\nReply succeeded:{posted[post]}\n---------------------")
+            update_replied_entries_table(self.cur, post.fullname, posted[post])
+
+    def run(self):
+        while True:
+            self.scrape_reddit()
+            sleep(60)
 
     def get_formatted_post_body(self, books_to_post: list) -> str:
         """
@@ -97,8 +104,11 @@ class RedditScanAndReplyBot:
         :param books_to_post: list of books as string.
         :returns: Formatted string representing post body to be posted as a reply on Reddit.
         """
-
-        return str(books_to_post)
+        header = f"Hello, I am {self.reddit.user.me()}. I am a bot that posts information on books that you have mentioned."
+        body = "body"
+        footer = f"This post was made by a bot. For more information, or to give feedback or suggestions, please visit /r/{self.configs['PRAW']['bot_subreddit']}."
+        formatted_body = '\n'.join([header,body,footer])
+        return formatted_body
 
     def __repr__(self):
         as_string = f"Database Config: {self._database_config}\nReddit Config: {self._praw_config}"
@@ -119,8 +129,14 @@ class RedditScanAndReplyBot:
 
     @reddit.setter
     def reddit(self, reddit_config: dict):
+        """
+        Takes a dictionary of reddit configuration data. Check that required fields are present.
+        Sets property if so, otherwise raises an exception.
+        :param reddit_config: dict
+        :raises Exception: if malformed dict is passed.
+        """
         if not {'client_id','client_secret','password','username','user_agent','subreddits'}.issubset(reddit_config):
-            raise Exception("Reddit config missing required fields. Check config file.")
+            raise Exception("Reddit config missing required fields. Check config data.")
         self._reddit = connect_to_reddit(
             reddit_config['client_id'], 
             reddit_config['client_secret'], 
