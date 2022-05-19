@@ -1,8 +1,10 @@
 import re
+from unittest.mock import Mock
 import pytest
 import sqlite3 
 from RedditScanAndReplyBot import RedditScanAndReplyBot
 from conftest import MockComment, MockCommentForest, MockReddit
+from util.sql_funcs import get_replied_entries
 
 class Test_BotFunctionality:
 
@@ -125,21 +127,44 @@ class Test_BotFunctionality:
         expected_regex = r'Hello, I am \w*. I am a bot that posts information on books that you have mentioned.\n(Title:  \w*\nAuthor: \w*\nISBN:   \w*\nURI:    \w*\n)+\nThis post was made by a bot.\nFor more information, or to give feedback or suggestions, please visit \/r\/\w*.'
         assert re.match(expected_regex, post_text)
 
-    # @pytest.mark.usefixtures("setup_test_db")
-    # def test_scrape_reddit(self, mock_reddit, amend_sqlite3_connect):
-    #     rb = RedditScanAndReplyBot()
-    #     rb._praw_config = {
-    #         'client_id' : 'test_client_id',
-    #         'client_secret': 'test_client_secret',
-    #         'password':'test_password',
-    #         'username':'test_username',
-    #         'user_agent':'test_user_agent',
-    #         'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit'
-    #         }
-    #     rb._database_config = {'database_name':'./path'}
-    #     rb.setup()
-    #     rb.reddit.setup_reddit()
-    #     rb.scrape_reddit()
-    #TODO: test that new replies are posted and listed in database and reddit user profile
-    #     rb.scrape_reddit()
-    # TODO: test that no additional changes were made after first run
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_scrape_reddit(self, mock_reddit, amend_sqlite3_connect):
+        rb = RedditScanAndReplyBot()
+        rb._praw_config = {
+            'client_id' : 'test_client_id',
+            'client_secret': 'test_client_secret',
+            'password':'test_password',
+            'username':'test_username',
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit',
+            'bot_subreddit': 'mock_botsubreddit'
+            }
+        rb._database_config = {'database_name':'./path'}
+        rb.setup()
+        rb.reddit.setup_reddit()
+        pre_scrape_replied_entries = get_replied_entries(rb.cur)
+        pre_scrape_user_posts = rb.reddit.user.me().comments.new()
+
+        rb.scrape_reddit()
+        post_scrape_1_replied_entries = get_replied_entries(rb.cur)
+        post_scrape_1_user_posts = rb.reddit.user.me().comments.new()
+        
+        replied_diff = set(post_scrape_1_replied_entries).difference(set(pre_scrape_replied_entries))
+        user_post_diff = set(post_scrape_1_user_posts).difference(set(pre_scrape_user_posts))
+        expected_replied_diff = {'s3', 'c5', 'c3', 'c4'}
+        expected_post_diff = {
+                            MockComment(None, None, 't1_c7', None, None), 
+                            MockComment(None, None, 't1_c5', None, None),
+                            MockComment(None, None, 't1_c6', None, None)
+                            }
+        assert expected_post_diff == user_post_diff
+        assert expected_replied_diff == replied_diff
+        rb.scrape_reddit()
+
+        post_scrape_2_replied_entries = get_replied_entries(rb.cur)
+        post_scrape_2_user_posts = rb.reddit.user.me().comments.new()
+
+        replied_diff_2 = set(post_scrape_2_replied_entries).difference(set(post_scrape_1_replied_entries))
+        user_post_diff_2 = set(post_scrape_2_user_posts).difference(set(post_scrape_1_user_posts))
+        assert len(replied_diff_2) == 0
+        assert len(user_post_diff_2) == 0

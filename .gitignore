@@ -5,3 +5,4 @@ __pycache__
 .vscode
 .pytest_cache
 .mypy_cache
+tests/test.db
