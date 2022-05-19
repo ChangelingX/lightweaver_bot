@@ -1,3 +1,4 @@
+import re
 import pytest
 import sqlite3 
 from RedditScanAndReplyBot import RedditScanAndReplyBot
@@ -121,7 +122,8 @@ class Test_BotFunctionality:
         rb = RedditScanAndReplyBot().from_file('./path')
         rb.setup()
         post_text = rb.get_formatted_post_body(['book1', 'book2'])
-        print(f"\npost body:\n{post_text}")
+        expected_regex = r'Hello, I am \w*. I am a bot that posts information on books that you have mentioned.\n(Title:  \w*\nAuthor: \w*\nISBN:   \w*\nURI:    \w*\n)+\nThis post was made by a bot.\nFor more information, or to give feedback or suggestions, please visit \/r\/\w*.'
+        assert re.match(expected_regex, post_text)
 
     # @pytest.mark.usefixtures("setup_test_db")
     # def test_scrape_reddit(self, mock_reddit, amend_sqlite3_connect):
@@ -138,4 +140,6 @@ class Test_BotFunctionality:
     #     rb.setup()
     #     rb.reddit.setup_reddit()
     #     rb.scrape_reddit()
+    #TODO: test that new replies are posted and listed in database and reddit user profile
     #     rb.scrape_reddit()
+    # TODO: test that no additional changes were made after first run

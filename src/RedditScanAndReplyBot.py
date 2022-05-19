@@ -4,7 +4,7 @@ import sqlite3
 from time import sleep
 import praw # type: ignore
 from util.praw_funcs import connect_to_reddit, get_comments, get_submissions, post_comment, scan_entity # type: ignore
-from util.sql_funcs import get_books, get_opted_in_users, get_replied_entries, get_sql_cursor, update_replied_entries_table # type: ignore
+from util.sql_funcs import get_book_db_entry, get_books, get_opted_in_users, get_replied_entries, get_sql_cursor, update_replied_entries_table # type: ignore
 
 class RedditScanAndReplyBot:
     """
@@ -105,8 +105,19 @@ class RedditScanAndReplyBot:
         :returns: Formatted string representing post body to be posted as a reply on Reddit.
         """
         header = f"Hello, I am {self.reddit.user.me()}. I am a bot that posts information on books that you have mentioned."
-        body = "body"
-        footer = f"This post was made by a bot. For more information, or to give feedback or suggestions, please visit /r/{self.configs['PRAW']['bot_subreddit']}."
+        
+        body = ""
+        for book in books_to_post:
+            book_info = get_book_db_entry(self.cur, book)
+            book_info_formatted = '\n'.join([
+                f"Title:  {book_info['title']}",
+                f"Author: {book_info['author']}",
+                f"ISBN:   {book_info['isbn']}",
+                f"URI:    {book_info['uri']}"
+            ])
+            body = body + book_info_formatted + '\n' 
+
+        footer = f"This post was made by a bot.\nFor more information, or to give feedback or suggestions, please visit /r/{self.configs['PRAW']['bot_subreddit']}."
         formatted_body = '\n'.join([header,body,footer])
         return formatted_body
 
