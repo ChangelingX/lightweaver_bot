@@ -1,4 +1,5 @@
 from configparser import ConfigParser, NoSectionError
+import argparse
 import os
 import sqlite3
 from time import sleep
@@ -165,3 +166,18 @@ class RedditScanAndReplyBot:
     @cur.setter
     def cur(self, db_file: str):
         self._cursor = get_sql_cursor(db_file)
+
+def main(config):
+    if config is None:
+        raise Exception("No configuration file specified.")
+    if not os.path.isfile(config):
+        raise FileNotFoundError(f"Config file {config} not found.")
+    rb = RedditScanAndReplyBot().from_file(config)
+    rb.setup()
+    rb.run()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Scrapes reddit for hits on given keywords and posts relevant information as a reply.")
+    parser.add_argument('--config', '-c', dest='config', required=True, metavar="./config_file.ini")
+    args = parser.parse_args()
+    main(args.config)
