@@ -4,8 +4,8 @@ import os
 import sqlite3
 from time import sleep
 import praw # type: ignore
-from util.praw_funcs import connect_to_reddit, get_comments, get_submissions, post_comment, scan_entity # type: ignore
-from util.sql_funcs import get_book_db_entry, get_books, get_opted_in_users, get_replied_entries, get_sql_cursor, update_replied_entries_table # type: ignore
+from reddit_scan_and_reply_bot.util.praw_funcs import connect_to_reddit, get_comments, get_submissions, post_comment, scan_entity # type: ignore
+from reddit_scan_and_reply_bot.util.sql_funcs import get_book_db_entry, get_books, get_opted_in_users, get_replied_entries, get_sql_cursor, update_replied_entries_table # type: ignore
 
 class RedditScanAndReplyBot:
     """

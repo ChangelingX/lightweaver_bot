@@ -9,7 +9,7 @@ Usage:
 2. Create Sqlite3 database file.
 3. Run the program using `python -m RedditScanAndReplyBot.py --config <config.ini>
 
-##Config File Formatting
+## Config File Formatting
 
 The contents of this file should be as follows:
 
@@ -43,7 +43,7 @@ User Provided:
 
 The sqlite3 database information is under the [DATABASE] header. This must point to a sqlite3 database file that already exists and is configured with the appropriate information.
 
-##Sqlite3 Database Configuration
+## Sqlite3 Database Configuration
 
 The schema for this database is as follows.
 
