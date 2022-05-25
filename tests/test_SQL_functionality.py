@@ -1,8 +1,8 @@
 from importlib.resources import path
 import sqlite3
 import pytest 
-from RedditScanAndReplyBot import RedditScanAndReplyBot
-from util.sql_funcs import get_sql_cursor, get_books, get_opted_in_users, get_replied_entries, update_opted_in_users, update_replied_entries_table, get_book_db_entry # type: ignore
+from reddit_scan_and_reply_bot.RedditScanAndReplyBot import RedditScanAndReplyBot
+from reddit_scan_and_reply_bot.util.sql_funcs import get_sql_cursor, get_books, get_opted_in_users, get_replied_entries, update_opted_in_users, update_replied_entries_table, get_book_db_entry # type: ignore
 
 class Test_SQL_functionality:
     def test_get_sql_cursor(self, amend_sqlite3_connect):

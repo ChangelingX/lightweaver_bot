@@ -1,3 +1,18 @@
+Metadata-Version: 2.1
+Name: RedditScanAndReplyBot
+Version: 0.0.1
+Summary: A tool to scrape Reddit for entries in a database, and reply with formatted text based on that entry.
+Home-page: https://github.com/ChangelingX/lightweaver_bot
+Author: Lee Ninteau
+Author-email: lee@brightstep.me
+Project-URL: Bug Tracker, https://github.com/ChangelingX/lightweaver_bot/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
 # Reddit Scan And Reply Bot
 
 This program connects to reddit, scans for a list of books titles, and where found, posts a reply with information on the relevant book(s) mentioned.

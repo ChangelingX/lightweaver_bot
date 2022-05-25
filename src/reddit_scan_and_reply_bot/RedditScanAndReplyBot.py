@@ -105,18 +105,18 @@ class RedditScanAndReplyBot:
         :param books_to_post: list of books as string.
         :returns: Formatted string representing post body to be posted as a reply on Reddit.
         """
-        header = f"Hello, I am {self.reddit.user.me()}. I am a bot that posts information on books that you have mentioned."
+        header = f"Hello, I am {self.reddit.user.me()}. I am a bot that posts information on books that you have mentioned.\n\n------------------------\n"
         
         body = ""
         for book in books_to_post:
             book_info = get_book_db_entry(self.cur, book)
-            book_info_formatted = '\n'.join([
+            book_info_formatted = '\n\n'.join([
                 f"Title:  {book_info['title']}",
                 f"Author: {book_info['author']}",
                 f"ISBN:   {book_info['isbn']}",
                 f"URI:    {book_info['uri']}"
             ])
-            body = body + book_info_formatted + '\n' 
+            body = body + book_info_formatted + '\n\n------------------------\n\n' 
 
         footer = f"This post was made by a bot.\nFor more information, or to give feedback or suggestions, please visit /r/{self.configs['PRAW']['bot_subreddit']}."
         formatted_body = '\n'.join([header,body,footer])

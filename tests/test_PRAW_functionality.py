@@ -2,7 +2,7 @@ import pytest
 import prawcore # type: ignore
 import sqlite3
 from tests.conftest import MockComment, MockSubmission # type: ignore
-from util.praw_funcs import connect_to_reddit, get_submissions, get_comments, post_comment, scan_entity # type: ignore
+from src.reddit_scan_and_reply_bot.util.praw_funcs import connect_to_reddit, get_submissions, get_comments, post_comment, scan_entity # type: ignore
 
 class Test_PRAWFunctionality:
     def test_connect_to_reddit(self, mock_reddit):

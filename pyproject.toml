@@ -2,5 +2,9 @@
 testpaths = ['tests']
 python_functions = ['test_*', 'it_*']
 pythonpath = [
-    ".","src",
+    ".","src","reddit_scan_and_reply_bot","util", "src/reddit_scan_and_reply_bot"
 ]
+
+[build-system]
+requires = ["setuptools>=62"]
+build-backend = "setuptools.build_meta"

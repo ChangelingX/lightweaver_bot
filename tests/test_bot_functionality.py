@@ -2,9 +2,9 @@ import re
 from unittest.mock import Mock
 import pytest
 import sqlite3 
-from RedditScanAndReplyBot import RedditScanAndReplyBot
+from src.reddit_scan_and_reply_bot.RedditScanAndReplyBot import RedditScanAndReplyBot
 from conftest import MockComment, MockCommentForest, MockReddit
-from util.sql_funcs import get_replied_entries
+from src.reddit_scan_and_reply_bot.util.sql_funcs import get_replied_entries
 
 class Test_BotFunctionality:
 
@@ -82,7 +82,7 @@ class Test_BotFunctionality:
         with pytest.raises(Exception) as context:
             rb.reddit
 
-    def test_setup(self, mock_reddit, amend_configparser_read, amend_sqlite3_connect):
+    def test_setup(self, mock_reddit, amend_configparser_read, amend_os_path_isfile, amend_sqlite3_connect):
         rb = RedditScanAndReplyBot.from_file('./path')
         rb.setup()
 
@@ -120,11 +120,11 @@ class Test_BotFunctionality:
             rb.setup()
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_get_formatted_post_body(self, mock_reddit, amend_configparser_read, amend_sqlite3_connect):
+    def test_get_formatted_post_body(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
         rb = RedditScanAndReplyBot().from_file('./path')
         rb.setup()
         post_text = rb.get_formatted_post_body(['book1', 'book2'])
-        expected_regex = r'Hello, I am \w*. I am a bot that posts information on books that you have mentioned.\n(Title:  \w*\nAuthor: \w*\nISBN:   \w*\nURI:    \w*\n)+\nThis post was made by a bot.\nFor more information, or to give feedback or suggestions, please visit \/r\/\w*.'
+        expected_regex = r'Hello, I am \w*\. I am a bot that posts information on books that you have mentioned.\n\n------------------------\n\n(Title:  \w*\n\nAuthor: \w*\n\nISBN:   \w*\n\nURI:    \w*\n\n------------------------\n\n)+\nThis post was made by a bot.\nFor more information, or to give feedback or suggestions, please visit \/r\/\w*\.'
         assert re.match(expected_regex, post_text)
 
     @pytest.mark.usefixtures("setup_test_db")
