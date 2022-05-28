@@ -1,4 +1,5 @@
 import sqlite3
+import os
 from urllib.request import pathname2url
 
 def get_sql_cursor(db_str: str) -> sqlite3.Cursor:
@@ -111,3 +112,66 @@ def get_book_db_entry(session, title: str) -> dict:
     book_data['desc'] = book_db_entry[5]
 
     return book_data
+
+def create_database(db_str: str):
+    """
+    Takes a file path and creates a database at that location if the file does not already exist.
+    Raises an exception if the file specified exists and is not a sqlite3 database.
+    Raises an exception if the file specified exists and does not match the expected schema.
+    :param path: str denoting the file path. 
+    """
+
+    if os.path.isfile(db_str):
+        #confirm file is a sqlite3 database:
+        if os.path.getsize(db_str) < 100:
+            raise sqlite3.OperationalError(f"File {db_str} is not a valid sqlite3 file.")
+        with open(db_str, 'rb') as fd:
+            header = fd.read(100)
+            if not header[:16] == b'SQLite format 3\x00':
+                raise sqlite3.OperationalError(f"File {db_str} is not a valid sqlite3 file.")
+
+        try: #confirm we can connect to it as a rw sqlite3 database
+            dburi = 'file:{}?mode=rw'.format(pathname2url(db_str))
+            conn = sqlite3.connect(dburi, uri=True)
+            cur = conn.cursor()
+
+            # check that all 3 tables are present and match the expected schemas.
+            #TODO: There's probably a more flexible/maintainable way to do this.
+            cur.execute("PRAGMA table_info('books')")
+            books = cur.fetchall()
+            expected_book_columns = [(0, 'id', 'integer', 0, None, 1),
+                                    (1, 'title', 'TEXT', 1, None, 0),
+                                    (2, 'author', 'text', 1, None, 0),
+                                    (3, 'isbn', 'text', 1, None, 0),
+                                    (4, 'uri', 'text', 0, None, 0),
+                                    (5, 'summary', 'text', 1, None, 0)]
+            cur.execute("PRAGMA table_info('opted_in_users')")
+            oiu = cur.fetchall()
+            expected_opted_in_users = [(0, 'id', 'integer', 0, None, 1),
+                                    (1, 'reddit_username', 'TEXT', 1, None, 0)]
+            cur.execute("PRAGMA table_info('replied_entries')")
+            re = cur.fetchall()
+            expected_replied_entries = [(0, 'id', 'integer', 0, None, 1),
+                                        (1, 'reddit_id', 'TEXT', 1, None, 0),
+                                        (2, 'reply_succeeded_bool', 'integer', 1, None, 0)]
+            
+            #TODO: Is this an appropriate use of ProgrammingError?
+            if not expected_book_columns == books:
+                raise sqlite3.ProgrammingError("Table 'books' does note match the expected schema.")
+            if not expected_opted_in_users == oiu:
+                raise sqlite3.ProgrammingError("Table 'opted_in_users' does not match the expected schema.")
+            if not expected_replied_entries == re:
+                raise sqlite3.ProgrammingError("Table 'replied_entries' does not match the expected schema.")
+
+            return #if it already exists and matches the schema, silently do nothing.
+
+        except Exception as exception:
+            raise exception
+    else: 
+        # create the database.
+        conn = sqlite3.connect(db_str)
+        cur = conn.cursor()
+        cur.execute('CREATE TABLE books(id integer PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, author text NOT NULL, isbn text NOT NULL, uri text, summary text not null);')
+        cur.execute('CREATE TABLE replied_entries (id integer PRIMARY KEY AUTOINCREMENT, reddit_id TEXT NOT NULL, reply_succeeded_bool integer NOT NULL);')
+        cur.execute('CREATE TABLE opted_in_users (id integer PRIMARY KEY AUTOINCREMENT, reddit_username TEXT NOT NULL);')
+        conn.commit()

@@ -1,8 +1,9 @@
 from importlib.resources import path
+import os
 import sqlite3
 import pytest 
 from reddit_scan_and_reply_bot.RedditScanAndReplyBot import RedditScanAndReplyBot
-from reddit_scan_and_reply_bot.util.sql_funcs import get_sql_cursor, get_books, get_opted_in_users, get_replied_entries, update_opted_in_users, update_replied_entries_table, get_book_db_entry # type: ignore
+from reddit_scan_and_reply_bot.util.sql_funcs import create_database, get_sql_cursor, get_books, get_opted_in_users, get_replied_entries, update_opted_in_users, update_replied_entries_table, get_book_db_entry # type: ignore
 
 class Test_SQL_functionality:
     def test_get_sql_cursor(self, amend_sqlite3_connect):
@@ -73,3 +74,69 @@ class Test_SQL_functionality:
         result = get_book_db_entry(cur, 'book1')
         expected_result = {'title': 'book1', 'author': 'author1', 'isbn': 'isbn1', 'uri': 'url1', 'desc': 'sum1'}
         assert result == expected_result
+
+    def test_create_database_success(self, amend_sqlite3_connect, amend_os_path_isfile):
+        if os.path.isfile('./tests/test_db_1'):
+            os.remove('./tests/test_db_1')
+        create_database('./tests/test_db_1')
+        conn = sqlite3.connect('./tests/test_db_1')
+        cur = conn.cursor()
+        cur.execute("PRAGMA table_info('books')")
+        books = cur.fetchall()
+        expected_book_columns = [(0, 'id', 'integer', 0, None, 1),
+                                (1, 'title', 'TEXT', 1, None, 0),
+                                (2, 'author', 'text', 1, None, 0),
+                                (3, 'isbn', 'text', 1, None, 0),
+                                (4, 'uri', 'text', 0, None, 0),
+                                (5, 'summary', 'text', 1, None, 0)]
+        cur.execute("PRAGMA table_info('opted_in_users')")
+        oiu = cur.fetchall()
+        expected_opted_in_users = [(0, 'id', 'integer', 0, None, 1),
+                                (1, 'reddit_username', 'TEXT', 1, None, 0)]
+        cur.execute("PRAGMA table_info('replied_entries')")
+        re = cur.fetchall()
+        expected_replied_entries = [(0, 'id', 'integer', 0, None, 1),
+                                    (1, 'reddit_id', 'TEXT', 1, None, 0),
+                                    (2, 'reply_succeeded_bool', 'integer', 1, None, 0)]
+        assert expected_book_columns == books
+        assert expected_opted_in_users == oiu
+        assert expected_replied_entries == re
+        os.remove('./tests/test_db_1')
+
+    def test_create_database_nonsql_file(self):
+        open('./tests/not-a-db','a').close()
+        with pytest.raises(sqlite3.OperationalError) as context:
+            create_database('./tests/not-a-db')
+        os.remove('./tests/not-a-db')
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_create_database_wrongsql_database(self):
+        with pytest.raises(sqlite3.ProgrammingError) as context:
+            create_database('./tests/wrong_schema.db')
+        os.remove('./tests/wrong_schema.db')
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_create_database_db_already_exists(self, amend_sqlite3_connect, amend_os_path_isfile):
+        create_database('./tests/test.db')
+        conn = sqlite3.connect('./tests/test.db')
+        cur = conn.cursor()
+        cur.execute("PRAGMA table_info('books')")
+        books = cur.fetchall()
+        expected_book_columns = [(0, 'id', 'integer', 0, None, 1),
+                                (1, 'title', 'TEXT', 1, None, 0),
+                                (2, 'author', 'text', 1, None, 0),
+                                (3, 'isbn', 'text', 1, None, 0),
+                                (4, 'uri', 'text', 0, None, 0),
+                                (5, 'summary', 'text', 1, None, 0)]
+        cur.execute("PRAGMA table_info('opted_in_users')")
+        oiu = cur.fetchall()
+        expected_opted_in_users = [(0, 'id', 'integer', 0, None, 1),
+                                (1, 'reddit_username', 'TEXT', 1, None, 0)]
+        cur.execute("PRAGMA table_info('replied_entries')")
+        re = cur.fetchall()
+        expected_replied_entries = [(0, 'id', 'integer', 0, None, 1),
+                                    (1, 'reddit_id', 'TEXT', 1, None, 0),
+                                    (2, 'reply_succeeded_bool', 'integer', 1, None, 0)]
+        assert expected_book_columns == books
+        assert expected_opted_in_users == oiu
+        assert expected_replied_entries == re

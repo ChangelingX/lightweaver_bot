@@ -395,7 +395,10 @@ def amend_sqlite3_connect(mocker):
     def updated_func(db_name, *args, **kwargs):
         if db_name == './path' or (db_name == 'file:./path?mode=rw' and kwargs['uri'] == True):
             return original_func("file:./tests/test.db?mode=rw", uri=True)
-
+        if db_name == './wrong_schema' or (db_name == 'file:./wrong_schema?mode=rw' and kwargs['uri'] == True):
+            return original_func("file:./tests/wrong_schema.db?mode=rw", uri=True)
+        if db_name == './not-a-db':
+            return original_func("file:./tests/not-a-db?mode=rw", uri=True)
         return original_func(db_name, *args, **kwargs)
     
     mocker.patch('sqlite3.connect', new=updated_func)
@@ -416,6 +419,13 @@ def setup_test_db():
     cur.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)', ("test_author2",))
     cur.execute('INSERT INTO replied_entries (reddit_id, reply_succeeded_bool) VALUES (?, ?)',("c1","1",))
     cur.execute('INSERT INTO replied_entries (reddit_id, reply_succeeded_bool) VALUES (?, ?)',("s1","1",))
+    cur.connection.commit()
+
+    if os.path.exists("./tests/wrong_schema.db"):
+        os.remove("./tests/wrong_schema.db")
+    conn = sqlite3.connect("./tests/wrong_schema.db")
+    cur = conn.cursor()
+    cur.execute('CREATE TABLE books(id integer PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, author text NOT NULL, isbn text NOT NULL, uri text, summary text not null)')
     cur.connection.commit()
 
 #### CONFIGPARSER MOCKS ####
