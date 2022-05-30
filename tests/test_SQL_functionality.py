@@ -3,7 +3,7 @@ import os
 import sqlite3
 import pytest 
 from reddit_scan_and_reply_bot.RedditScanAndReplyBot import RedditScanAndReplyBot
-from reddit_scan_and_reply_bot.util.sql_funcs import create_database, get_sql_cursor, get_books, get_opted_in_users, get_replied_entries, update_opted_in_users, update_replied_entries_table, get_book_db_entry # type: ignore
+from reddit_scan_and_reply_bot.util.sql_funcs import add_opted_in_user, create_database, get_sql_cursor, get_books, get_opted_in_users, get_replied_entries, update_opted_in_users, update_replied_entries_table, get_book_db_entry # type: ignore
 
 class Test_SQL_functionality:
     def test_get_sql_cursor(self, amend_sqlite3_connect):
@@ -33,7 +33,7 @@ class Test_SQL_functionality:
     def test_add_opted_in_user(self, amend_sqlite3_connect):
         conn = sqlite3.connect('./path')
         cur = conn.cursor()
-        update_opted_in_users(cur, "test_author3")
+        add_opted_in_user(cur, "test_author3")
         result = sorted(get_opted_in_users(cur))
         expected_result = 'test_author3'
         assert expected_result in result
@@ -41,8 +41,8 @@ class Test_SQL_functionality:
     def test_add_opted_in_user_duplicate(self, amend_sqlite3_connect):
         conn = sqlite3.connect('./path')
         cur = conn.cursor()
-        with pytest.raises(ValueError) as context:
-            update_opted_in_users(cur, "test_author2")  
+        with pytest.raises(sqlite3.IntegrityError) as context:
+            add_opted_in_user(cur, "test_author2")  
         
     @pytest.mark.usefixtures('setup_test_db')
     def test_get_replied_posts(self, amend_sqlite3_connect):
@@ -140,3 +140,59 @@ class Test_SQL_functionality:
         assert expected_book_columns == books
         assert expected_opted_in_users == oiu
         assert expected_replied_entries == re
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_update_opted_in_user_simple(self, amend_sqlite3_connect):
+        conn = sqlite3.connect('./path')
+        cur = conn.cursor()
+        usernames = []
+        usernames.append("user1")
+        usernames.append("user2")
+        update_opted_in_users(cur, usernames)
+        cur.execute('Select * from opted_in_users')
+        results = cur.fetchall()
+        expected_results = [(1, 'test_author1'), 
+                            (2, 'test_author2'),
+                            (3, 'user1'),
+                            (4, 'user2')]
+        assert results == expected_results
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_update_opted_in_user_with_duplicates(self, amend_sqlite3_connect):
+        conn = sqlite3.connect('./path')
+        cur = conn.cursor()
+        usernames = []
+        usernames.append("user1")
+        usernames.append("test_author1")
+        update_opted_in_users(cur, usernames)
+        cur.execute('Select * from opted_in_users')
+        results = cur.fetchall()
+        expected_results = [(1, 'test_author1'), 
+                            (2, 'test_author2'),
+                            (3, 'user1')]
+        assert results == expected_results
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_update_opted_in_user_blank_list(self, amend_sqlite3_connect):
+        conn = sqlite3.connect('./path')
+        cur = conn.cursor()
+        usernames = []
+        update_opted_in_users(cur, usernames)
+        cur.execute('Select * from opted_in_users')
+        results = cur.fetchall()
+        expected_results = [(1, 'test_author1'), 
+                            (2, 'test_author2')]
+        assert results == expected_results
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_update_opted_in_user_no_new_users(self, amend_sqlite3_connect):
+        conn = sqlite3.connect('./path')
+        cur = conn.cursor()
+        usernames = []
+        usernames.append("test_author1")
+        update_opted_in_users(cur, usernames)
+        cur.execute('Select * from opted_in_users')
+        results = cur.fetchall()
+        expected_results = [(1, 'test_author1'), 
+                            (2, 'test_author2')]
+        assert results == expected_results

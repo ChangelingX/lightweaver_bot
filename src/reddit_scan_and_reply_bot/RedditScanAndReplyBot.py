@@ -124,8 +124,14 @@ class RedditScanAndReplyBot:
 
     def populate_opted_in_users(self):
         """
-        
+        Connects to reddit, scrapes the opt-in thread for usersnames, then adds them to the opted_in_users table.
+        :raises Exception: if praw is not connected to reddit.
+        :raises Exception: if sql database is not connected.
         """
+        # check if praw has a connection to reddit, raise exception if not.
+        # check if sql cursor is set, raise exception if not.
+        # retrieve comments from reddit by url in praw function.
+        # pass usernames as list to update table function.
 
     def __repr__(self):
         as_string = f"Database Config: {self._database_config}\nReddit Config: {self._praw_config}"

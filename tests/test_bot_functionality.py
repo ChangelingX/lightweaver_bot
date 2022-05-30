@@ -151,11 +151,11 @@ class Test_BotFunctionality:
         
         replied_diff = set(post_scrape_1_replied_entries).difference(set(pre_scrape_replied_entries))
         user_post_diff = set(post_scrape_1_user_posts).difference(set(pre_scrape_user_posts))
-        expected_replied_diff = {'s3', 'c5', 'c3', 'c4'}
+        expected_replied_diff = {'s3', 'c5', 'c3', 'c4', 'c6'}
         expected_post_diff = {
                             MockComment(None, None, 't1_c7', None, None), 
                             MockComment(None, None, 't1_c5', None, None),
-                            MockComment(None, None, 't1_c6', None, None)
+                            MockComment(None, None, 't1_c8', None, None)
                             }
         assert expected_post_diff == user_post_diff
         assert expected_replied_diff == replied_diff

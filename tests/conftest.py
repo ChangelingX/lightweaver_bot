@@ -24,28 +24,31 @@ class MockReddit:
         self._subredditForest = MockSubredditForest(self)
         self._next_comment_id = 't1_c1'
         self._next_submission_id = 't3_s1'
+        self._next_permalink_id = 1
 
     def setup_reddit(self):
         subreddit1 = MockSubreddit(self, 'mock_subreddit1')
         subreddit2 = MockSubreddit(self, 'mock_subreddit2')
         subreddit3 = MockSubreddit(self, 'quarantined_subreddit', quarantined=True)
 
-        sr1_sub1 = MockSubmission(self, subreddit1, self.next_submission_id, 'test_author1', 'title', 'selftext')
-        sr1_sub2 = MockSubmission(self, subreddit1, self.next_submission_id, 'test_author1', 'title', 'selftext')
-        sr1_sub3 = MockSubmission(self, subreddit1, self.next_submission_id, 'test_author1', 'book1', 'selftext')
-        sr2_sub1 = MockSubmission(self, subreddit2, self.next_submission_id, 'test_author1', 'Locked Submission', 'selftext', locked=True)
-        sr3_sub1 = MockSubmission(self, subreddit3, self.next_submission_id, 'test_author1', 'title', 'selftext')
+        sr1_sub1 = MockSubmission(self, subreddit1, self.next_submission_id, 'test_author1', 'title', 'selftext', self.next_permalink_id)
+        sr1_sub2 = MockSubmission(self, subreddit1, self.next_submission_id, 'test_author1', 'title', 'selftext', self.next_permalink_id)
+        sr1_sub3 = MockSubmission(self, subreddit1, self.next_submission_id, 'test_author1', 'book1', 'selftext', self.next_permalink_id)
+        sr2_sub1 = MockSubmission(self, subreddit2, self.next_submission_id, 'test_author1', 'Locked Submission', 'selftext', self.next_permalink_id, locked=True)
+        sr3_sub1 = MockSubmission(self, subreddit3, self.next_submission_id, 'test_author1', 'title', 'selftext', self.next_permalink_id)
 
         sr1_sub1_c1 = MockComment(self, sr1_sub1, self.next_comment_id, 'test_author1', 'book1')
         sr1_sub1_c2 = MockComment(self, sr1_sub1, self.next_comment_id, 'test_author1', 'hello')
         sr1_sub1_c3 = MockComment(self, sr1_sub1, self.next_comment_id, 'test_author1', 'book1')
         sr2_sub1_c1 = MockComment(self, sr2_sub1, self.next_comment_id, 'test_author1', 'book1 locked_submission')
+        sr2_sub1_c2 = MockComment(self, sr2_sub1, self.next_comment_id, 'test_author2', 'book1 locked_submission')
         sr3_sub1_c1 = MockComment(self, sr3_sub1, self.next_comment_id, 'test_author1', 'book1 quarantined subreddit')
 
         sr1_sub1.add_comment(sr1_sub1_c1)
         sr1_sub1.add_comment(sr1_sub1_c2)
         sr1_sub1.add_comment(sr1_sub1_c3)
         sr2_sub1.add_comment(sr2_sub1_c1)
+        sr2_sub1.add_comment(sr2_sub1_c2)
         sr3_sub1.add_comment(sr3_sub1_c1)
 
         subreddit1.add_submission(sr1_sub1)
@@ -60,6 +63,10 @@ class MockReddit:
 
     def subreddit(self, subreddits=''):
         return self._subredditForest.subreddit(subreddits)
+
+    def submission(self, name=None, permalink=None):
+        return self._subredditForest.submission(name=name, permalink=permalink)
+
 
     def __eq__(self, other):
         if isinstance(other, MockReddit):
@@ -78,6 +85,12 @@ class MockReddit:
         next_submission_id_int = int(current_submission_id[4:])+1
         self._next_submission_id = "t3_s"+str(next_submission_id_int)
         return current_submission_id
+
+    @property
+    def next_permalink_id(self):
+        current_permalink_id = self._next_permalink_id
+        self._next_permalink_id = current_permalink_id + 1
+        return current_permalink_id
 
 class MockSubredditForest:
     def __init__(self, reddit, subreddits=None, *args, **kwargs):
@@ -103,6 +116,11 @@ class MockSubredditForest:
             raise Exception("Can't add a non-subreddit to MockSubredditForest")
 
         self._subreddits.append(subreddit)
+    
+    def submission(self, permalink=None, name=None):
+        for subreddit in self._subreddits:
+            if subreddit.submission(permalink=permalink, name=name) is not None:
+                return subreddit.submission(permalink=permalink, name=name)
 
     def new(self, limit=100):
         i = 0
@@ -132,6 +150,13 @@ class MockSubreddit:
 
         self._submissions.append(submission)
 
+    def submission(self, name=None, permalink=None):
+        for submission in self._submissions:
+            if submission.name == name:
+                return submission
+            if submission.permalink == permalink:
+                return submission
+
     def new(self, limit=100):
         return self._submissions[:limit]
 
@@ -153,13 +178,14 @@ class MockSubreddit:
         return self._reddit
 
 class MockSubmission:
-    def __init__(self, reddit, parent, fullname: str, author, title, selftext, locked=False, *args, **kwargs):
+    def __init__(self, reddit, parent, fullname: str, author, title: str, selftext: str, shortlink, locked=False, *args, **kwargs):
         self._reddit = reddit
         self._parent = parent
         self._fullname = fullname
         self._author = author
         self._title = title
         self._selftext = selftext
+        self._shortlink = shortlink
         self._locked = locked
         self._comments = MockCommentForest(self.reddit, self)
 
@@ -201,7 +227,7 @@ class MockSubmission:
         return hash(repr(self))
 
     def __str__(self):
-        return f"Fullname: {self.fullname}\nAuthor:{self.author}\nTitle:{self.title}\nSelftext:{self.selftext}\nLocked:{self.locked}"
+        return f"Fullname: {self.fullname}\nAuthor:{self.author}\nTitle:{self.title}\nSelftext:{self.selftext}\nLink:{self.permalink}\nLocked:{self.locked}"
 
     def add_comment(self, comment):
         self._comments.add_comment(comment)
@@ -213,6 +239,20 @@ class MockSubmission:
     @property
     def fullname(self) -> str:
         return self._fullname
+
+    @property
+    def name(self) -> str:
+        return self._fullname.split("_")[1]
+
+    @property
+    def permalink(self) -> str:
+        link = f"https://www.mockreddit.com/r/{self.parent.name}/{self._shortlink}/{self.title}/"
+        return link
+
+    @property
+    def shortlink(self) -> str:
+        link = f"https://redd.it/{self._shortlink}"
+        return link
 
     @property
     def author(self) -> str:
@@ -411,7 +451,7 @@ def setup_test_db():
     cur = conn.cursor()
     cur.execute('CREATE TABLE books(id integer PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, author text NOT NULL, isbn text NOT NULL, uri text, summary text not null)')
     cur.execute('CREATE TABLE replied_entries (id integer PRIMARY KEY AUTOINCREMENT, reddit_id TEXT NOT NULL, reply_succeeded_bool integer NOT NULL)')
-    cur.execute('CREATE TABLE opted_in_users (id integer PRIMARY KEY AUTOINCREMENT, reddit_username TEXT NOT NULL)')
+    cur.execute('CREATE TABLE opted_in_users (id integer PRIMARY KEY AUTOINCREMENT, reddit_username TEXT UNIQUE NOT NULL)')
     cur.execute('INSERT INTO books (title, author, isbn, uri, summary) VALUES (?,?,?,?,?)',('book1','author1','isbn1','url1','sum1'))
     cur.execute('INSERT INTO books (title, author, isbn, uri, summary) VALUES (?,?,?,?,?)',('book2','author2','isbn2','url2','sum2'))
     cur.execute('INSERT INTO books (title, author, isbn, uri, summary) VALUES (?,?,?,?,?)',('book3','author3','isbn3','url3','sum3'))

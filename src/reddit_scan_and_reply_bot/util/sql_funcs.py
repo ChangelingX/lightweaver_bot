@@ -47,7 +47,22 @@ def get_opted_in_users(session):
     opted_in_users = list({str(user[0]).lower() for user in opted_in_users})
     return opted_in_users
 
-def update_opted_in_users(session, username: str):
+def add_opted_in_user(session, username:str):
+    """
+    Take a cusor and a reddit username, add that username to the opted in users database.
+    Raises an exception if the username is not unique.
+    :param session: sqlite3.Cursor
+    :param username: Reddit username (str)
+    :raises Sqlite3.IntegrityError: If username creates non-unique entry.
+    """
+    try:
+        session.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)', [username])
+    except sqlite3.IntegrityError as e:
+        raise e
+    finally:
+        session.connection.commit()
+
+def update_opted_in_users(session, usernames: list):
     """
     Takes a cursor and a reddit Username, adds that username to the opted in users database if not already present.
     :param session: Sqlite3.Cursor
@@ -55,11 +70,9 @@ def update_opted_in_users(session, username: str):
     :raises ValueError: If user is already in database.
     """
     current_users = get_opted_in_users(session)
-    if username in current_users:
-        raise ValueError("User is already in opted in list.")
-    else:
-        session.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)', [username])
-        session.connection.commit()
+    for username in usernames:
+        if username not in current_users:
+            add_opted_in_user(session, username)
 
 def get_replied_entries(session):
     """
