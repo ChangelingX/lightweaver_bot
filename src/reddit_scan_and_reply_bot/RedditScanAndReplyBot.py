@@ -122,6 +122,11 @@ class RedditScanAndReplyBot:
         formatted_body = '\n'.join([header,body,footer])
         return formatted_body
 
+    def populate_opted_in_users(self):
+        """
+        
+        """
+
     def __repr__(self):
         as_string = f"Database Config: {self._database_config}\nReddit Config: {self._praw_config}"
         return as_string
