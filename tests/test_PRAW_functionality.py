@@ -2,7 +2,7 @@ import pytest
 import prawcore # type: ignore
 import sqlite3
 from tests.conftest import MockComment, MockReddit, MockSubmission # type: ignore
-from src.reddit_scan_and_reply_bot.util.praw_funcs import connect_to_reddit, get_submission, get_submissions, get_comments, get_thread_commenters, post_comment, scan_entity # type: ignore
+from src.reddit_scan_and_reply_bot.util.praw_funcs import connect_to_reddit, get_submission, get_submissions, get_comments, get_thread_commenters, get_user_replied_entities, post_comment, scan_entity # type: ignore
 
 class Test_PRAWFunctionality:
     def test_connect_to_reddit(self, mock_reddit):
@@ -290,3 +290,22 @@ class Test_PRAWFunctionality:
         commenters = sorted(get_thread_commenters(submission))
         expected_result = []
         assert commenters == expected_result
+
+    def test_get_user_replies(self, mock_reddit):
+        p = connect_to_reddit(
+            'test_client_id',
+            'test_client_secret',
+            'test_password',
+            'test_username',
+            'test_user_agent'
+        )
+        p.setup_reddit()
+        submission = p.get_submissions()[0]
+        submission.reply("test1")
+        submission.reply("test2")
+        submission.reply("test3")
+        submission = p.get_submissions()[1]
+        submission.reply("test4")
+        results = sorted(get_user_replied_entities(p))
+        expected_results = ['t3_s1', 't3_s2']
+        assert results == expected_results

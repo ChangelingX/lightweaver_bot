@@ -32,7 +32,7 @@ def get_submission(praw_instance, fullname=None, URI=None):
     if URI is None and fullname is None:
         raise Exception("Must specify either a fullname or URI.")
     if URI is not None:
-        submission = praw_instance.submission(permalink=URI)
+        submission = praw_instance.submission(url=URI)
     else:
         name = fullname.split("_")[1]
         submission = praw_instance.submission(name=name)
@@ -101,7 +101,6 @@ def scan_entity(entity, books, replied_entries, opted_in_users):
 
     return found_books
 
-
 def post_comment(reddit, entity, post_body: str) -> bool:
     """
     Accepts an entity to reply to and a list of books to post information for.
@@ -126,3 +125,20 @@ def post_comment(reddit, entity, post_body: str) -> bool:
             return True
 
     return True
+
+def get_user_replied_entities(reddit) -> list:
+    """
+    Takes a praw.Reddit instance.
+    Returns a list of reddit entity fullnames e.g ['t3_abcdef', 't1_ghijkl', ...].
+    This list is composed of all of the comments and submissions that this bot has successfully replied to.
+    :param reddit: a praw.Reddit instance.
+    :returns: list(str) of reddit base36 comment unique identifiers.
+    """
+
+    replied_entities = []
+    own_comments = reddit.user.me().comments
+    for comment in own_comments:
+        replied_entities.append(comment.parent)
+    
+    replied_entities = list({str(entity.fullname).lower() for entity in replied_entities})
+    return replied_entities

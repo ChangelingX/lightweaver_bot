@@ -77,8 +77,8 @@ class MockReddit:
     def subreddit(self, subreddits=''):
         return self._subredditForest.subreddit(subreddits)
 
-    def submission(self, name=None, permalink=None):
-        return self._subredditForest.submission(name=name, permalink=permalink)
+    def submission(self, name=None, url=None):
+        return self._subredditForest.submission(name=name, url=url)
 
     def get_submissions(self):
         return self._subredditForest.get_submissions()
@@ -132,10 +132,10 @@ class MockSubredditForest:
 
         self._subreddits.append(subreddit)
     
-    def submission(self, permalink=None, name=None):
+    def submission(self, url=None, name=None):
         for subreddit in self._subreddits:
-            if subreddit.submission(permalink=permalink, name=name) is not None:
-                return subreddit.submission(permalink=permalink, name=name)
+            if subreddit.submission(url=url, name=name) is not None:
+                return subreddit.submission(url=url, name=name)
 
     def new(self, limit=100):
         i = 0
@@ -172,11 +172,11 @@ class MockSubreddit:
 
         self._submissions.append(submission)
 
-    def submission(self, name=None, permalink=None):
+    def submission(self, name=None, url=None):
         for submission in self._submissions:
             if submission.name == name:
                 return submission
-            if submission.permalink == permalink:
+            if submission.url == url:
                 return submission
 
     def new(self, limit=100):
@@ -266,8 +266,13 @@ class MockSubmission:
     def name(self) -> str:
         return self._fullname.split("_")[1]
 
+
     @property
     def permalink(self) -> str:
+        return self.url
+        
+    @property
+    def url(self) -> str:
         link = f"{self.reddit.tld}/r/{self.parent.name}/comments/{self._shortlink}/{self.title}/"
         return link
 
