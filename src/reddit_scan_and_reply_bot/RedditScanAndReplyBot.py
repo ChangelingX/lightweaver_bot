@@ -4,8 +4,8 @@ import os
 import sqlite3
 from time import sleep
 import praw # type: ignore
-from util.praw_funcs import connect_to_reddit, get_comments, get_submission, get_submissions, get_thread_commenters, post_comment, scan_entity # type: ignore
-from util.sql_funcs import get_book_db_entry, get_books, get_opted_in_users, get_replied_entries, get_sql_cursor, update_opted_in_users, update_replied_entries_table # type: ignore
+from util.praw_funcs import connect_to_reddit, get_comments, get_submission, get_submissions, get_thread_commenters, get_user_replied_entities, post_comment, scan_entity # type: ignore
+from util.sql_funcs import get_book_db_entry, get_books, get_opted_in_users, get_replied_entries, get_sql_cursor, update_opted_in_users, add_replied_entry, update_replied_entry_table # type: ignore
 
 class RedditScanAndReplyBot:
     """
@@ -90,7 +90,7 @@ class RedditScanAndReplyBot:
 
         #for each post, add to the list of posts that have been replied to.
         for post in posted:
-            update_replied_entries_table(self.cur, post.fullname, posted[post])
+            add_replied_entry(self.cur, post.id, posted[post])
 
     def run(self):
         #TODO: schedule periodic update of opted_in_users table.
@@ -145,8 +145,11 @@ class RedditScanAndReplyBot:
         """
         Retrieves list of posts the bot has replied to on Reddit, updates replied_entries sql database to match.
         """
-        # retrieve list of replied entries from Reddit.
-        # Update sql database to match list.
+        entries_from_reddit = get_user_replied_entities(self.reddit)
+        entries_to_add = {}
+        for entry in entries_from_reddit:
+            entries_to_add[entry] = True
+        update_replied_entry_table(self.cur, entries_to_add)
     
     @property
     def configs(self) -> dict:

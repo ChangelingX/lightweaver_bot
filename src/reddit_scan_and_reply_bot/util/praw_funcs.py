@@ -140,5 +140,5 @@ def get_user_replied_entities(reddit) -> list:
     for comment in own_comments:
         replied_entities.append(comment.parent)
     
-    replied_entities = list({str(entity.fullname).lower() for entity in replied_entities})
+    replied_entities = list({str(entity.id).lower() for entity in replied_entities})
     return replied_entities

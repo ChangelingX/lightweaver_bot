@@ -258,3 +258,30 @@ class Test_BotFunctionality:
         rb.reddit.setup_reddit()
         with pytest.raises(Exception) as context:
             rb.repopulate_opted_in_users()
+
+    @pytest.mark.usefixtures('setup_test_db')
+    def test_updated_replied_entries_simple(self, mock_reddit, amend_os_path_isfile, amend_sqlite3_connect, amend_configparser_read):
+        rb = RedditScanAndReplyBot()
+        rb._praw_config = {
+            'client_id' : 'test_client_id',
+            'client_secret': 'test_client_secret',
+            'password':'test_password',
+            'username':'test_username',
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit',
+            'bot_subreddit': 'mock_botsubreddit',
+            'opt_in_thread': 'https://www.mockreddit.com/r/mock_botsubreddit/comments/8/opt_in_thread/'
+            }
+        rb._database_config = {'database_name':'./path'}
+        rb.setup()
+        rb.reddit.setup_reddit()
+        submission = rb.reddit.get_submissions()[0]
+        print(submission)
+        submission.reply("test")
+        rb.cur.execute("select * from replied_entries")
+        before = rb.cur.fetchall()
+        print(before)
+        rb.repopulate_replied_entries()
+        rb.cur.execute("select * from replied_entries")
+        after = rb.cur.fetchall()
+        print(after)

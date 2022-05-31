@@ -307,5 +307,5 @@ class Test_PRAWFunctionality:
         submission = p.get_submissions()[1]
         submission.reply("test4")
         results = sorted(get_user_replied_entities(p))
-        expected_results = ['t3_s1', 't3_s2']
+        expected_results = ['s1', 's2']
         assert results == expected_results

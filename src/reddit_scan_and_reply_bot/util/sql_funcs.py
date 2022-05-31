@@ -108,20 +108,31 @@ def get_replied_entries(session):
     already_replied = list({str(entry[0]) for entry in already_replied})
     return already_replied
 
-def update_replied_entries_table(session, fullname: str, reply_succeeded: bool) -> None:
+def add_replied_entry(session, reddit_id: str, reply_succeeded: bool) -> None:
     """
     Takes a cursor and a reddit post fullname, adds that fullname to the opted in users table if not already present.
     :param session: Sqlite3.Cursor
     :param username: Reddit fullname (str)
     :raises ValueError: If post fullname is already in database.
     """
-    type_string, reddit_id = fullname.split('_')
-    current_posts = get_replied_entries(session)
-    if reddit_id in current_posts:
-        raise ValueError("Post reddit_id is already in replied posts list. This should never happen. The application may have double posted.")
-    else:
+    try:
         session.execute("INSERT INTO replied_entries (reddit_id, reply_succeeded_bool) VALUES (?, ?)", [reddit_id, int(reply_succeeded)])
+    except sqlite3.IntegrityError as e:
+        raise e
+    finally:
         session.connection.commit()
+
+def update_replied_entry_table(session, entries: dict):
+    """
+    Takes a sql cursor and a of of format dict[entry: str(reddit_entity.fullname)] = successful_reply: bool.
+    Compares this dict to the existing replied entries table and adds any missing entries.
+    :param session: sqlite3.Cursor()
+    param entries: dict[entry] = successful_reply where entry is the string representation of a posts' fullname, and successful_reply is a bool representing whether or not the post was verified as successful.
+    """
+    current_entries = get_replied_entries(session)
+    for reddit_id in entries:
+        if reddit_id not in current_entries:
+            add_replied_entry(session, reddit_id, entries[reddit_id])
 
 def get_book_db_entry(session, title: str) -> dict:
     """

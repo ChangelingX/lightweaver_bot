@@ -266,6 +266,9 @@ class MockSubmission:
     def name(self) -> str:
         return self._fullname.split("_")[1]
 
+    @property
+    def id(self) -> str:
+        return self._fullname.split("_")[1]
 
     @property
     def permalink(self) -> str:
@@ -411,6 +414,10 @@ class MockComment:
         return self._fullname
 
     @property
+    def id(self) -> str:
+        return self._fullname.split("_")[1]
+
+    @property
     def author(self):
         return self._author
 
@@ -477,7 +484,7 @@ def setup_test_db():
     conn = sqlite3.connect("./tests/test.db")
     cur = conn.cursor()
     cur.execute('CREATE TABLE books(id integer PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, author text NOT NULL, isbn text NOT NULL, uri text, summary text not null)')
-    cur.execute('CREATE TABLE replied_entries (id integer PRIMARY KEY AUTOINCREMENT, reddit_id TEXT NOT NULL, reply_succeeded_bool integer NOT NULL)')
+    cur.execute('CREATE TABLE replied_entries (id integer PRIMARY KEY AUTOINCREMENT, reddit_id TEXT UNIQUE NOT NULL, reply_succeeded_bool integer NOT NULL)')
     cur.execute('CREATE TABLE opted_in_users (id integer PRIMARY KEY AUTOINCREMENT, reddit_username TEXT UNIQUE NOT NULL)')
     cur.execute('INSERT INTO books (title, author, isbn, uri, summary) VALUES (?,?,?,?,?)',('book1','author1','isbn1','url1','sum1'))
     cur.execute('INSERT INTO books (title, author, isbn, uri, summary) VALUES (?,?,?,?,?)',('book2','author2','isbn2','url2','sum2'))

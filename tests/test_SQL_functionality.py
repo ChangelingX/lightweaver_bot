@@ -3,7 +3,7 @@ import os
 import sqlite3
 import pytest 
 from reddit_scan_and_reply_bot.RedditScanAndReplyBot import RedditScanAndReplyBot
-from reddit_scan_and_reply_bot.util.sql_funcs import add_opted_in_user, create_database, get_sql_cursor, get_books, get_opted_in_users, get_replied_entries, update_opted_in_users, update_replied_entries_table, get_book_db_entry # type: ignore
+from reddit_scan_and_reply_bot.util.sql_funcs import add_opted_in_user, create_database, get_sql_cursor, get_books, get_opted_in_users, get_replied_entries, update_opted_in_users, add_replied_entry, get_book_db_entry, update_replied_entry_table # type: ignore
 
 class Test_SQL_functionality:
     def test_get_sql_cursor(self, amend_sqlite3_connect):
@@ -53,10 +53,46 @@ class Test_SQL_functionality:
         assert result == expected_result
 
     @pytest.mark.usefixtures('setup_test_db')
+    def test_updated_replied_entries(self, amend_sqlite3_connect):
+        conn = sqlite3.connect('./path')
+        cur = conn.cursor()
+        entries = {"c5": True}
+        update_replied_entry_table(cur, entries)
+        cur.execute("select (reddit_id) from replied_entries")
+        result = sorted(cur.fetchall())
+        expected_result = sorted([('c1',), ('c5',), ('s1',)])
+        assert result == expected_result
+
+    @pytest.mark.usefixtures('setup_test_db')
+    def test_updated_replied_entries_no_change(self, amend_sqlite3_connect):
+        conn = sqlite3.connect('./path')
+        cur = conn.cursor()
+        entries = {
+            "c1": True,
+            "s1": True        
+            }
+        update_replied_entry_table(cur, entries)
+        cur.execute("select (reddit_id) from replied_entries")
+        result = sorted(cur.fetchall())
+        expected_result = sorted([('c1',), ('s1',)])
+        assert result == expected_result
+
+    @pytest.mark.usefixtures('setup_test_db')
+    def test_updated_replied_entries_already_present(self, amend_sqlite3_connect):
+        conn = sqlite3.connect('./path')
+        cur = conn.cursor()
+        entries = {"c1": True}
+        update_replied_entry_table(cur, entries)
+        cur.execute("select (reddit_id) from replied_entries")
+        result = sorted(cur.fetchall())
+        expected_result = sorted([('c1',), ('s1',)])
+        assert result == expected_result
+
+    @pytest.mark.usefixtures('setup_test_db')
     def test_add_replied_post(self, amend_sqlite3_connect):
         conn = sqlite3.connect('./path')
         cur = conn.cursor()
-        update_replied_entries_table(cur, "t1_c2", True)
+        add_replied_entry(cur, "c2", True)
         result = sorted(get_replied_entries(cur))
         expected_result = 'c2'
         assert expected_result in result
@@ -65,8 +101,8 @@ class Test_SQL_functionality:
     def test_add_replied_post_duplicate(self, amend_sqlite3_connect):
         conn = sqlite3.connect('./path')
         cur = conn.cursor()
-        with pytest.raises(ValueError) as context:
-            update_replied_entries_table(cur, "t1_c1", True)
+        with pytest.raises(sqlite3.IntegrityError) as context:
+            add_replied_entry(cur, "c1", True)
         
     def test_get_book_database_entry(self, amend_sqlite3_connect):
         conn = sqlite3.connect('./path')
