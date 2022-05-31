@@ -62,17 +62,37 @@ def add_opted_in_user(session, username:str):
     finally:
         session.connection.commit()
 
+def remove_opted_in_user(session, username:str):
+    """
+    Takes a sqlite3 cursor and a reddit username, removes the username from the opted_in_users database if found.
+    
+    :param session: sqlite3.Cursor.
+    :param username: reddit username (str)
+    :raises sqlite3.IntegrityError: if username not found in table, or if table not found.
+    """
+    try:
+         session.execute('DELETE FROM opted_in_users WHERE (reddit_username) = (?) COLLATE NOCASE',[username.lower()])
+    except sqlite3.IntegrityError as e:
+        raise e
+    finally:
+        session.connection.commit()
+
 def update_opted_in_users(session, usernames: list):
     """
     Takes a cursor and a reddit Username, adds that username to the opted in users database if not already present.
+    Removes users absent from passed username list.
     :param session: Sqlite3.Cursor
     :param username: Reddit username (str)
-    :raises ValueError: If user is already in database.
     """
-    current_users = get_opted_in_users(session)
-    for username in usernames:
+    current_users = get_opted_in_users(session) #get current list of users
+
+    for username in usernames: #add new users
         if username not in current_users:
             add_opted_in_user(session, username)
+
+    for current_user in current_users: #remove users not passed.
+        if current_user not in usernames:
+            remove_opted_in_user(session, current_user)
 
 def get_replied_entries(session):
     """

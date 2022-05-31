@@ -4,7 +4,7 @@ import pytest
 import sqlite3 
 from src.reddit_scan_and_reply_bot.RedditScanAndReplyBot import RedditScanAndReplyBot
 from conftest import MockComment, MockCommentForest, MockReddit
-from src.reddit_scan_and_reply_bot.util.sql_funcs import get_replied_entries
+from src.reddit_scan_and_reply_bot.util.sql_funcs import get_opted_in_users, get_replied_entries
 
 class Test_BotFunctionality:
 
@@ -22,7 +22,8 @@ class Test_BotFunctionality:
                 'username': "test_username", 
                 'user_agent': "test_user_agent",
                 'subreddits': "mock_subreddit1+mock_subreddit2+quarantined_subreddit",
-                'bot_subreddit': 'mock_botsubreddit'
+                'bot_subreddit': 'mock_botsubreddit',
+                'opt_in_thread': 'https://www.mockreddit.com/r/mock_botsubreddit/comments/6/opt_in_thread/'
             }
         }
         assert result == expected_result
@@ -153,9 +154,9 @@ class Test_BotFunctionality:
         user_post_diff = set(post_scrape_1_user_posts).difference(set(pre_scrape_user_posts))
         expected_replied_diff = {'s3', 'c5', 'c3', 'c4', 'c6'}
         expected_post_diff = {
-                            MockComment(None, None, 't1_c7', None, None), 
-                            MockComment(None, None, 't1_c5', None, None),
-                            MockComment(None, None, 't1_c8', None, None)
+                            MockComment(None, None, 't1_c11', None, None), 
+                            MockComment(None, None, 't1_c13', None, None),
+                            MockComment(None, None, 't1_c12', None, None)
                             }
         assert expected_post_diff == user_post_diff
         assert expected_replied_diff == replied_diff
@@ -168,3 +169,92 @@ class Test_BotFunctionality:
         user_post_diff_2 = set(post_scrape_2_user_posts).difference(set(post_scrape_1_user_posts))
         assert len(replied_diff_2) == 0
         assert len(user_post_diff_2) == 0
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_update_opted_in_users(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
+        rb = RedditScanAndReplyBot()
+        rb._praw_config = {
+            'client_id' : 'test_client_id',
+            'client_secret': 'test_client_secret',
+            'password':'test_password',
+            'username':'test_username',
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit',
+            'bot_subreddit': 'mock_botsubreddit',
+            'opt_in_thread': 'https://www.mockreddit.com/r/mock_botsubreddit/comments/6/opt_in_thread/'
+            }
+        rb._database_config = {'database_name':'./path'}
+        rb.setup()
+        rb.reddit.setup_reddit()
+        rb.repopulate_opted_in_users()
+        results = sorted(get_opted_in_users(rb.cur))
+        expected_results = sorted(['test_author1', 'test_author2', 'test_author3', 'test_author4'])
+        assert results == expected_results
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_update_opted_in_users_unenroll(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
+        rb = RedditScanAndReplyBot()
+        rb._praw_config = {
+            'client_id' : 'test_client_id',
+            'client_secret': 'test_client_secret',
+            'password':'test_password',
+            'username':'test_username',
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit',
+            'bot_subreddit': 'mock_botsubreddit',
+            'opt_in_thread': 'https://www.mockreddit.com/r/mock_botsubreddit/comments/6/opt_in_thread/'
+            }
+        rb._database_config = {'database_name':'./path'}
+        rb.setup()
+        rb.reddit.setup_reddit()
+        rb.cur.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)',['test_author3'])
+        rb.cur.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)',['test_author4'])
+        rb.cur.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)',['test_author5'])
+        rb.cur.connection.commit()
+        rb.repopulate_opted_in_users()
+        results = sorted(get_opted_in_users(rb.cur))
+        expected_results = sorted(['test_author1', 'test_author2', 'test_author3', 'test_author4'])
+        assert results == expected_results
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_update_opted_in_users_no_change(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
+        rb = RedditScanAndReplyBot()
+        rb._praw_config = {
+            'client_id' : 'test_client_id',
+            'client_secret': 'test_client_secret',
+            'password':'test_password',
+            'username':'test_username',
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit',
+            'bot_subreddit': 'mock_botsubreddit',
+            'opt_in_thread': 'https://www.mockreddit.com/r/mock_botsubreddit/comments/6/opt_in_thread/'
+            }
+        rb._database_config = {'database_name':'./path'}
+        rb.setup()
+        rb.reddit.setup_reddit()
+        rb.cur.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)',['test_author3'])
+        rb.cur.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)',['test_author4'])
+        rb.cur.connection.commit()
+        rb.repopulate_opted_in_users()
+        results = sorted(get_opted_in_users(rb.cur))
+        expected_results = sorted(['test_author1', 'test_author2', 'test_author3', 'test_author4'])
+        assert results == expected_results
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_update_opted_in_users_thread_not_found(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
+        rb = RedditScanAndReplyBot()
+        rb._praw_config = {
+            'client_id' : 'test_client_id',
+            'client_secret': 'test_client_secret',
+            'password':'test_password',
+            'username':'test_username',
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit',
+            'bot_subreddit': 'mock_botsubreddit',
+            'opt_in_thread': 'https://www.mockreddit.com/r/mock_botsubreddit/comments/8/opt_in_thread/'
+            }
+        rb._database_config = {'database_name':'./path'}
+        rb.setup()
+        rb.reddit.setup_reddit()
+        with pytest.raises(Exception) as context:
+            rb.repopulate_opted_in_users()

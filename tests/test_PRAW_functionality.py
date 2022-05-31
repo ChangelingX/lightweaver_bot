@@ -13,8 +13,7 @@ class Test_PRAWFunctionality:
             'test_username',
             'test_user_agent'
         )
-        # expected_result = MockReddit(username="test_username")
-        # assert p == expected_result
+        assert str(p.user) == "test_username"
 
     def test_get_submissions(self, mock_reddit):
         p = connect_to_reddit(
@@ -56,7 +55,7 @@ class Test_PRAWFunctionality:
             'test_user_agent'
         )
         p.setup_reddit()
-        result = get_submission(p, URI="https://www.mockreddit.com/r/mock_subreddit1/1/title/")
+        result = get_submission(p, URI="https://www.mockreddit.com/r/mock_subreddit1/comments/1/title/")
         expected_result = MockSubmission(None, None, 't3_s1', None, None, None, None)
         assert result == expected_result
 
@@ -212,7 +211,7 @@ class Test_PRAWFunctionality:
         comment = get_comments(submission)[0]
         result = post_comment(p, comment, "this is a comment")
         expected_result = True
-        expected_post = MockComment(None, None, 't1_c7', None, None)
+        expected_post = MockComment(None, None, 't1_c11', None, None)
         assert result == expected_result
         assert expected_post in p.user.comments
 
@@ -245,7 +244,7 @@ class Test_PRAWFunctionality:
         submission = subreddit.new(limit=1)[0]
         comment = get_comments(submission)[0]
         result = post_comment(p, comment, "this is a comment")
-        expected_comment = MockComment(None, None, 't1_c7', None, None)
+        expected_comment = MockComment(None, None, 't1_c11', None, None)
         expected_result = True
         assert result is expected_result
         assert expected_comment in p.user.comments
@@ -273,7 +272,7 @@ class Test_PRAWFunctionality:
             'test_user_agent'
         )
         p.setup_reddit()
-        submission = get_submission(p, URI="https://www.mockreddit.com/r/mock_subreddit1/1/title/")
+        submission = get_submission(p, URI="https://www.mockreddit.com/r/mock_subreddit1/comments/1/title/")
         commenters = get_thread_commenters(submission)
         expected_result = ['test_author1']
         assert commenters == expected_result

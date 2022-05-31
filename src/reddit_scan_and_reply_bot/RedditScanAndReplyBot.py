@@ -4,8 +4,8 @@ import os
 import sqlite3
 from time import sleep
 import praw # type: ignore
-from reddit_scan_and_reply_bot.util.praw_funcs import connect_to_reddit, get_comments, get_submissions, post_comment, scan_entity # type: ignore
-from reddit_scan_and_reply_bot.util.sql_funcs import get_book_db_entry, get_books, get_opted_in_users, get_replied_entries, get_sql_cursor, update_replied_entries_table # type: ignore
+from reddit_scan_and_reply_bot.util.praw_funcs import connect_to_reddit, get_comments, get_submission, get_submissions, get_thread_commenters, post_comment, scan_entity # type: ignore
+from reddit_scan_and_reply_bot.util.sql_funcs import get_book_db_entry, get_books, get_opted_in_users, get_replied_entries, get_sql_cursor, update_opted_in_users, update_replied_entries_table # type: ignore
 
 class RedditScanAndReplyBot:
     """
@@ -28,7 +28,7 @@ class RedditScanAndReplyBot:
         try:
             
             praw_config = {k:v for k, v in parser.items('PRAW')}
-            if not {'client_id', 'client_secret', 'password', 'username', 'user_agent'}.issubset(praw_config):
+            if not {'client_id', 'client_secret', 'password', 'username', 'user_agent', 'opt_in_thread'}.issubset(praw_config):
                 raise Exception(f"{init_file} section [PRAW] does not contain required key=value pairs.")
 
             database_config = {k:v for k, v in parser.items('DATABASE')}
@@ -122,16 +122,19 @@ class RedditScanAndReplyBot:
         formatted_body = '\n'.join([header,body,footer])
         return formatted_body
 
-    def populate_opted_in_users(self):
+    def repopulate_opted_in_users(self):
         """
         Connects to reddit, scrapes the opt-in thread for usersnames, then adds them to the opted_in_users table.
         :raises Exception: if praw is not connected to reddit.
         :raises Exception: if sql database is not connected.
         """
-        # check if praw has a connection to reddit, raise exception if not.
-        # check if sql cursor is set, raise exception if not.
-        # retrieve comments from reddit by url in praw function.
-        # pass usernames as list to update table function.
+        submission = get_submission(self.reddit, URI=self.configs['PRAW']['opt_in_thread'])
+
+        if submission is None:
+            raise Exception(f"Submission {self.configs['PRAW']['opt_in_thread']} not found. Check config file.")
+        
+        opted_in_users = get_thread_commenters(submission)
+        update_opted_in_users(self.cur, opted_in_users)
 
     def __repr__(self):
         as_string = f"Database Config: {self._database_config}\nReddit Config: {self._praw_config}"

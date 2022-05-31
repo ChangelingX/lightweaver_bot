@@ -26,6 +26,7 @@ def get_submission(praw_instance, fullname=None, URI=None):
     :param praw_instance: An instance of a praw.Reddit object.
     :param fullname: the fullname of a submission (e.g. t3_abcdef)
     :param uri: the full URI/permalink of a reddit thread. (e.g. https://www.reddit.com/r/<subreddit>/comments/<threadID/<threadtitle>
+    :returns: A praw Submission, or None if none found.
     """
 
     if URI is None and fullname is None:

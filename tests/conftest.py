@@ -21,6 +21,7 @@ def mock_reddit(monkeysession):
 class MockReddit:
     def __init__(self, *args, **kwargs):
         self.user = MockRedditor(self, kwargs['username'])
+        self.tld = 'https://www.mockreddit.com'
         self._subredditForest = MockSubredditForest(self)
         self._next_comment_id = 't1_c1'
         self._next_submission_id = 't3_s1'
@@ -30,12 +31,14 @@ class MockReddit:
         subreddit1 = MockSubreddit(self, 'mock_subreddit1')
         subreddit2 = MockSubreddit(self, 'mock_subreddit2')
         subreddit3 = MockSubreddit(self, 'quarantined_subreddit', quarantined=True)
+        subreddit4 = MockSubreddit(self, 'mock_botsubreddit')
 
         sr1_sub1 = MockSubmission(self, subreddit1, self.next_submission_id, 'test_author1', 'title', 'selftext', self.next_permalink_id)
         sr1_sub2 = MockSubmission(self, subreddit1, self.next_submission_id, 'test_author1', 'title', 'selftext', self.next_permalink_id)
         sr1_sub3 = MockSubmission(self, subreddit1, self.next_submission_id, 'test_author1', 'book1', 'selftext', self.next_permalink_id)
-        sr2_sub1 = MockSubmission(self, subreddit2, self.next_submission_id, 'test_author1', 'Locked Submission', 'selftext', self.next_permalink_id, locked=True)
+        sr2_sub1 = MockSubmission(self, subreddit2, self.next_submission_id, 'test_author1', 'locked_submission', 'selftext', self.next_permalink_id, locked=True)
         sr3_sub1 = MockSubmission(self, subreddit3, self.next_submission_id, 'test_author1', 'title', 'selftext', self.next_permalink_id)
+        sr4_sub1 = MockSubmission(self, subreddit4, self.next_submission_id, 'test_author1', 'opt_in_thread', 'post here to opt in', self.next_permalink_id)
 
         sr1_sub1_c1 = MockComment(self, sr1_sub1, self.next_comment_id, 'test_author1', 'book1')
         sr1_sub1_c2 = MockComment(self, sr1_sub1, self.next_comment_id, 'test_author1', 'hello')
@@ -43,6 +46,10 @@ class MockReddit:
         sr2_sub1_c1 = MockComment(self, sr2_sub1, self.next_comment_id, 'test_author1', 'book1 locked_submission')
         sr2_sub1_c2 = MockComment(self, sr2_sub1, self.next_comment_id, 'test_author2', 'book1 locked_submission')
         sr3_sub1_c1 = MockComment(self, sr3_sub1, self.next_comment_id, 'test_author1', 'book1 quarantined subreddit')
+        sr4_sub1_c1 = MockComment(self, sr3_sub1, self.next_comment_id, 'test_author1', 'subscribe me!')
+        sr4_sub1_c2 = MockComment(self, sr3_sub1, self.next_comment_id, 'test_author2', 'subscribe me!')
+        sr4_sub1_c3 = MockComment(self, sr3_sub1, self.next_comment_id, 'test_author3', 'subscribe me!')
+        sr4_sub1_c4 = MockComment(self, sr3_sub1, self.next_comment_id, 'test_author4', 'subscribe me!')
 
         sr1_sub1.add_comment(sr1_sub1_c1)
         sr1_sub1.add_comment(sr1_sub1_c2)
@@ -50,16 +57,22 @@ class MockReddit:
         sr2_sub1.add_comment(sr2_sub1_c1)
         sr2_sub1.add_comment(sr2_sub1_c2)
         sr3_sub1.add_comment(sr3_sub1_c1)
+        sr4_sub1.add_comment(sr4_sub1_c1)
+        sr4_sub1.add_comment(sr4_sub1_c2)
+        sr4_sub1.add_comment(sr4_sub1_c3)
+        sr4_sub1.add_comment(sr4_sub1_c4)
 
         subreddit1.add_submission(sr1_sub1)
         subreddit1.add_submission(sr1_sub2)
         subreddit1.add_submission(sr1_sub3)
         subreddit2.add_submission(sr2_sub1)
         subreddit3.add_submission(sr3_sub1)
+        subreddit4.add_submission(sr4_sub1)
 
         self._subredditForest.add_subreddit(subreddit1)
         self._subredditForest.add_subreddit(subreddit2)
         self._subredditForest.add_subreddit(subreddit3)
+        self._subredditForest.add_subreddit(subreddit4)
 
     def subreddit(self, subreddits=''):
         return self._subredditForest.subreddit(subreddits)
@@ -67,7 +80,9 @@ class MockReddit:
     def submission(self, name=None, permalink=None):
         return self._subredditForest.submission(name=name, permalink=permalink)
 
-
+    def get_submissions(self):
+        return self._subredditForest.get_submissions()
+        
     def __eq__(self, other):
         if isinstance(other, MockReddit):
             return True
@@ -133,6 +148,13 @@ class MockSubredditForest:
                     return submissions_to_return
         return submissions_to_return
 
+    def get_submissions(self):
+        submissions = []
+        for subreddit in self._subreddits:
+            for submission in subreddit._submissions:
+                submissions.append(submission)
+        return submissions
+
     @property
     def reddit(self):
         return self._reddit
@@ -164,8 +186,8 @@ class MockSubreddit:
         return self.name
 
     def __str__(self) -> str:
-        as_string = "-------SUBMISSION-------\n"+\
-                    f"Submission: {self.name}\n"+\
+        as_string = "-------SUBREDDIT-------\n"+\
+                    f"Subreddit: {self.name}\n"+\
                     f"Quarantined: {self.quarantined}"
         return as_string
         
@@ -207,7 +229,7 @@ class MockSubmission:
                         self.status_code = status_code
                 raise prawcore.exceptions.Forbidden(MockResponse(403))
 
-        comment = MockComment(self.reddit, self, 't1_c5', self.reddit.user.me(), reply_body)
+        comment = MockComment(self.reddit, self, self.reddit.next_comment_id, self.reddit.user.me(), reply_body)
         self._comments.add_comment(comment)
         self.reddit.user.add_comment(comment)
 
@@ -246,7 +268,7 @@ class MockSubmission:
 
     @property
     def permalink(self) -> str:
-        link = f"https://www.mockreddit.com/r/{self.parent.name}/{self._shortlink}/{self.title}/"
+        link = f"{self.reddit.tld}/r/{self.parent.name}/comments/{self._shortlink}/{self.title}/"
         return link
 
     @property

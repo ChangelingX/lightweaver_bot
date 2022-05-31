@@ -142,10 +142,12 @@ class Test_SQL_functionality:
         assert expected_replied_entries == re
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_update_opted_in_user_simple(self, amend_sqlite3_connect):
+    def test_update_opted_in_user_simple_add(self, amend_sqlite3_connect):
         conn = sqlite3.connect('./path')
         cur = conn.cursor()
         usernames = []
+        usernames.append('test_author1')
+        usernames.append('test_author2')
         usernames.append("user1")
         usernames.append("user2")
         update_opted_in_users(cur, usernames)
@@ -158,18 +160,43 @@ class Test_SQL_functionality:
         assert results == expected_results
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_update_opted_in_user_with_duplicates(self, amend_sqlite3_connect):
+    def test_update_opted_in_user_remove_user(self, amend_sqlite3_connect):
         conn = sqlite3.connect('./path')
         cur = conn.cursor()
         usernames = []
-        usernames.append("user1")
         usernames.append("test_author1")
         update_opted_in_users(cur, usernames)
         cur.execute('Select * from opted_in_users')
         results = cur.fetchall()
-        expected_results = [(1, 'test_author1'), 
-                            (2, 'test_author2'),
+        expected_results = [(1, 'test_author1')]
+        assert results == expected_results
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_update_opted_in_user_add_and_remove(self, amend_sqlite3_connect):
+        conn = sqlite3.connect('./path')
+        cur = conn.cursor()
+        usernames = []
+        usernames.append("test_author1")
+        usernames.append("user1")
+        update_opted_in_users(cur, usernames)
+        cur.execute('Select * from opted_in_users')
+        results = cur.fetchall()
+        expected_results = [(1, 'test_author1'),
                             (3, 'user1')]
+        assert results == expected_results
+
+    @pytest.mark.usefixtures("setup_test_db")
+    def test_update_opted_in_user_no_change(self, amend_sqlite3_connect):
+        conn = sqlite3.connect('./path')
+        cur = conn.cursor()
+        usernames = []
+        usernames.append("test_author1")
+        usernames.append("test_author2")
+        update_opted_in_users(cur, usernames)
+        cur.execute('Select * from opted_in_users')
+        results = cur.fetchall()
+        expected_results = [(1, 'test_author1'),
+                            (2, 'test_author2')]
         assert results == expected_results
 
     @pytest.mark.usefixtures("setup_test_db")
@@ -180,19 +207,5 @@ class Test_SQL_functionality:
         update_opted_in_users(cur, usernames)
         cur.execute('Select * from opted_in_users')
         results = cur.fetchall()
-        expected_results = [(1, 'test_author1'), 
-                            (2, 'test_author2')]
-        assert results == expected_results
-
-    @pytest.mark.usefixtures("setup_test_db")
-    def test_update_opted_in_user_no_new_users(self, amend_sqlite3_connect):
-        conn = sqlite3.connect('./path')
-        cur = conn.cursor()
-        usernames = []
-        usernames.append("test_author1")
-        update_opted_in_users(cur, usernames)
-        cur.execute('Select * from opted_in_users')
-        results = cur.fetchall()
-        expected_results = [(1, 'test_author1'), 
-                            (2, 'test_author2')]
+        expected_results = []
         assert results == expected_results
