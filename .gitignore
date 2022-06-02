@@ -7,6 +7,7 @@ __pycache__
 .mypy_cache
 /tests/test.db
 /tests/wrong_schema.db
+venv
 venv*
 dist
 src/RedditScanAndReplyBot.egg-info/*

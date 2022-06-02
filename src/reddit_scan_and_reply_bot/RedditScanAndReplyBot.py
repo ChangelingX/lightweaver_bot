@@ -1,11 +1,22 @@
-from configparser import ConfigParser, NoSectionError
 import argparse
 import os
 import sqlite3
+import time
+from configparser import ConfigParser, NoSectionError
 from time import sleep
-import praw # type: ignore
-from reddit_scan_and_reply_bot.util.praw_funcs import connect_to_reddit, get_comments, get_submissions, post_comment, scan_entity # type: ignore
-from reddit_scan_and_reply_bot.util.sql_funcs import get_book_db_entry, get_books, get_opted_in_users, get_replied_entries, get_sql_cursor, update_replied_entries_table # type: ignore
+
+import praw  # type: ignore
+import schedule
+
+from util.praw_funcs import (connect_to_reddit, get_comments,  # type: ignore
+                             get_submission, get_submissions,
+                             get_thread_commenters, get_user_replied_entities,
+                             post_comment, scan_entity)
+from util.sql_funcs import (add_replied_entry,  # type: ignore
+                            get_book_db_entry, get_books, get_opted_in_users,
+                            get_replied_entries, get_sql_cursor,
+                            update_opted_in_users, update_replied_entry_table)
+
 
 class RedditScanAndReplyBot:
     """
@@ -28,7 +39,7 @@ class RedditScanAndReplyBot:
         try:
             
             praw_config = {k:v for k, v in parser.items('PRAW')}
-            if not {'client_id', 'client_secret', 'password', 'username', 'user_agent'}.issubset(praw_config):
+            if not {'client_id', 'client_secret', 'password', 'username', 'user_agent', 'opt_in_thread'}.issubset(praw_config):
                 raise Exception(f"{init_file} section [PRAW] does not contain required key=value pairs.")
 
             database_config = {k:v for k, v in parser.items('DATABASE')}
@@ -90,12 +101,17 @@ class RedditScanAndReplyBot:
 
         #for each post, add to the list of posts that have been replied to.
         for post in posted:
-            update_replied_entries_table(self.cur, post.fullname, posted[post])
+            add_replied_entry(self.cur, post.id, posted[post])
 
     def run(self):
+        """
+        Schedules and runs periodic tasks. This is the main loop.
+        """
+        schedule.every(1).minutes.do(self.scrape_reddit)
+        schedule.every().hour.do(self.repopulate_opted_in_users)
         while True:
-            self.scrape_reddit()
-            sleep(60)
+            schedule.run_pending()
+            time.sleep(1)
 
     def get_formatted_post_body(self, books_to_post: list) -> str:
         """
@@ -122,9 +138,33 @@ class RedditScanAndReplyBot:
         formatted_body = '\n'.join([header,body,footer])
         return formatted_body
 
+    def repopulate_opted_in_users(self):
+        """
+        Connects to reddit, scrapes the opt-in thread for usersnames, then adds them to the opted_in_users table.
+        :raises Exception: if praw is not connected to reddit.
+        :raises Exception: if sql database is not connected.
+        """
+        submission = get_submission(self.reddit, URI=self.configs['PRAW']['opt_in_thread'])
+
+        if submission is None:
+            raise Exception(f"Submission {self.configs['PRAW']['opt_in_thread']} not found. Check config file.")
+        
+        opted_in_users = get_thread_commenters(submission)
+        update_opted_in_users(self.cur, opted_in_users)
+
     def __repr__(self):
         as_string = f"Database Config: {self._database_config}\nReddit Config: {self._praw_config}"
         return as_string
+
+    def repopulate_replied_entries(self):
+        """
+        Retrieves list of posts the bot has replied to on Reddit, updates replied_entries sql database to match.
+        """
+        entries_from_reddit = get_user_replied_entities(self.reddit)
+        entries_to_add = {}
+        for entry in entries_from_reddit:
+            entries_to_add[entry] = True
+        update_replied_entry_table(self.cur, entries_to_add)
     
     @property
     def configs(self) -> dict:
@@ -174,6 +214,7 @@ def main(config):
         raise FileNotFoundError(f"Config file {config} not found.")
     rb = RedditScanAndReplyBot().from_file(config)
     rb.setup()
+    rb.repopulate_opted_in_users()
     rb.run()
 
 if __name__ == '__main__':

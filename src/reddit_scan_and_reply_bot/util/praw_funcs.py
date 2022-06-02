@@ -19,6 +19,26 @@ def get_submissions(praw_instance, subreddits_to_scan: str):
     submissions = praw_instance.subreddit(subreddits_to_scan).new()
     return submissions
 
+def get_submission(praw_instance, fullname=None, URI=None):
+    """
+    Takes a praw instance and either a submission fullname or URI. 
+    Retrieves and returns the submission.
+    :param praw_instance: An instance of a praw.Reddit object.
+    :param fullname: the fullname of a submission (e.g. t3_abcdef)
+    :param uri: the full URI/permalink of a reddit thread. (e.g. https://www.reddit.com/r/<subreddit>/comments/<threadID/<threadtitle>
+    :returns: A praw Submission, or None if none found.
+    """
+
+    if URI is None and fullname is None:
+        raise Exception("Must specify either a fullname or URI.")
+    if URI is not None:
+        submission = praw_instance.submission(url=URI)
+    else:
+        name = fullname.split("_")[1]
+        submission = praw_instance.submission(name=name)
+
+    return submission
+
 def get_comments(submission):
     """
     Iterates the comments in a given submission and returns a 
@@ -31,6 +51,19 @@ def get_comments(submission):
     for comment in comment_forest:
         comments.append(comment)
     return comments
+
+def get_thread_commenters(submission):
+    """
+    Iterates the comments of the submission and collects the authors into a list. Deduplicates them and returns them.
+    :param submission: Reddit.submission object.
+    :returns: list[usernames: str]
+    """
+    comment_forest = get_comments(submission)
+    authors = []
+    for comment in comment_forest:
+        authors.append(comment.author)
+    authors = list({str(author).lower() for author in authors})
+    return authors
 
 def scan_entity(entity, books, replied_entries, opted_in_users):
     """
@@ -68,7 +101,6 @@ def scan_entity(entity, books, replied_entries, opted_in_users):
 
     return found_books
 
-
 def post_comment(reddit, entity, post_body: str) -> bool:
     """
     Accepts an entity to reply to and a list of books to post information for.
@@ -93,3 +125,20 @@ def post_comment(reddit, entity, post_body: str) -> bool:
             return True
 
     return True
+
+def get_user_replied_entities(reddit) -> list:
+    """
+    Takes a praw.Reddit instance.
+    Returns a list of reddit entity fullnames e.g ['t3_abcdef', 't1_ghijkl', ...].
+    This list is composed of all of the comments and submissions that this bot has successfully replied to.
+    :param reddit: a praw.Reddit instance.
+    :returns: list(str) of reddit base36 comment unique identifiers.
+    """
+
+    replied_entities = []
+    own_comments = reddit.user.me().comments
+    for comment in own_comments:
+        replied_entities.append(comment.parent)
+    
+    replied_entities = list({str(entity.id).lower() for entity in replied_entities})
+    return replied_entities

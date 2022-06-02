@@ -47,19 +47,52 @@ def get_opted_in_users(session):
     opted_in_users = list({str(user[0]).lower() for user in opted_in_users})
     return opted_in_users
 
-def update_opted_in_users(session, username: str):
+def add_opted_in_user(session, username:str):
+    """
+    Take a cusor and a reddit username, add that username to the opted in users database.
+    Raises an exception if the username is not unique.
+    :param session: sqlite3.Cursor
+    :param username: Reddit username (str)
+    :raises Sqlite3.IntegrityError: If username creates non-unique entry.
+    """
+    try:
+        session.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)', [username])
+    except sqlite3.IntegrityError as e:
+        raise e
+    finally:
+        session.connection.commit()
+
+def remove_opted_in_user(session, username:str):
+    """
+    Takes a sqlite3 cursor and a reddit username, removes the username from the opted_in_users database if found.
+    
+    :param session: sqlite3.Cursor.
+    :param username: reddit username (str)
+    :raises sqlite3.IntegrityError: if username not found in table, or if table not found.
+    """
+    try:
+         session.execute('DELETE FROM opted_in_users WHERE (reddit_username) = (?) COLLATE NOCASE',[username.lower()])
+    except sqlite3.IntegrityError as e:
+        raise e
+    finally:
+        session.connection.commit()
+
+def update_opted_in_users(session, usernames: list):
     """
     Takes a cursor and a reddit Username, adds that username to the opted in users database if not already present.
+    Removes users absent from passed username list.
     :param session: Sqlite3.Cursor
     :param username: Reddit username (str)
-    :raises ValueError: If user is already in database.
     """
-    current_users = get_opted_in_users(session)
-    if username in current_users:
-        raise ValueError("User is already in opted in list.")
-    else:
-        session.execute('INSERT INTO opted_in_users (reddit_username) VALUES (?)', [username])
-        session.connection.commit()
+    current_users = get_opted_in_users(session) #get current list of users
+
+    for username in usernames: #add new users
+        if username not in current_users:
+            add_opted_in_user(session, username)
+
+    for current_user in current_users: #remove users not passed.
+        if current_user not in usernames:
+            remove_opted_in_user(session, current_user)
 
 def get_replied_entries(session):
     """
@@ -75,20 +108,31 @@ def get_replied_entries(session):
     already_replied = list({str(entry[0]) for entry in already_replied})
     return already_replied
 
-def update_replied_entries_table(session, fullname: str, reply_succeeded: bool) -> None:
+def add_replied_entry(session, reddit_id: str, reply_succeeded: bool) -> None:
     """
     Takes a cursor and a reddit post fullname, adds that fullname to the opted in users table if not already present.
     :param session: Sqlite3.Cursor
     :param username: Reddit fullname (str)
     :raises ValueError: If post fullname is already in database.
     """
-    type_string, reddit_id = fullname.split('_')
-    current_posts = get_replied_entries(session)
-    if reddit_id in current_posts:
-        raise ValueError("Post reddit_id is already in replied posts list. This should never happen. The application may have double posted.")
-    else:
+    try:
         session.execute("INSERT INTO replied_entries (reddit_id, reply_succeeded_bool) VALUES (?, ?)", [reddit_id, int(reply_succeeded)])
+    except sqlite3.IntegrityError as e:
+        raise e
+    finally:
         session.connection.commit()
+
+def update_replied_entry_table(session, entries: dict):
+    """
+    Takes a sql cursor and a of of format dict[entry: str(reddit_entity.fullname)] = successful_reply: bool.
+    Compares this dict to the existing replied entries table and adds any missing entries.
+    :param session: sqlite3.Cursor()
+    param entries: dict[entry] = successful_reply where entry is the string representation of a posts' fullname, and successful_reply is a bool representing whether or not the post was verified as successful.
+    """
+    current_entries = get_replied_entries(session)
+    for reddit_id in entries:
+        if reddit_id not in current_entries:
+            add_replied_entry(session, reddit_id, entries[reddit_id])
 
 def get_book_db_entry(session, title: str) -> dict:
     """
