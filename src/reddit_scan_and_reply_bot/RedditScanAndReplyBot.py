@@ -1,11 +1,22 @@
-from configparser import ConfigParser, NoSectionError
 import argparse
 import os
 import sqlite3
+import time
+from configparser import ConfigParser, NoSectionError
 from time import sleep
-import praw # type: ignore
-from util.praw_funcs import connect_to_reddit, get_comments, get_submission, get_submissions, get_thread_commenters, get_user_replied_entities, post_comment, scan_entity # type: ignore
-from util.sql_funcs import get_book_db_entry, get_books, get_opted_in_users, get_replied_entries, get_sql_cursor, update_opted_in_users, add_replied_entry, update_replied_entry_table # type: ignore
+
+import praw  # type: ignore
+import schedule
+
+from util.praw_funcs import (connect_to_reddit, get_comments,  # type: ignore
+                             get_submission, get_submissions,
+                             get_thread_commenters, get_user_replied_entities,
+                             post_comment, scan_entity)
+from util.sql_funcs import (add_replied_entry,  # type: ignore
+                            get_book_db_entry, get_books, get_opted_in_users,
+                            get_replied_entries, get_sql_cursor,
+                            update_opted_in_users, update_replied_entry_table)
+
 
 class RedditScanAndReplyBot:
     """
@@ -93,10 +104,14 @@ class RedditScanAndReplyBot:
             add_replied_entry(self.cur, post.id, posted[post])
 
     def run(self):
-        #TODO: schedule periodic update of opted_in_users table.
+        """
+        Schedules and runs periodic tasks. This is the main loop.
+        """
+        schedule.every(1).minutes.do(self.scrape_reddit)
+        schedule.every().hour.do(self.repopulate_opted_in_users)
         while True:
-            self.scrape_reddit()
-            sleep(60)
+            schedule.run_pending()
+            time.sleep(1)
 
     def get_formatted_post_body(self, books_to_post: list) -> str:
         """

@@ -275,13 +275,72 @@ class Test_BotFunctionality:
         rb._database_config = {'database_name':'./path'}
         rb.setup()
         rb.reddit.setup_reddit()
-        submission = rb.reddit.get_submissions()[0]
-        print(submission)
+        submission = rb.reddit.get_submissions()[1]
+        rb.cur.execute("select * from replied_entries")
+        before_reply = rb.cur.fetchall()
         submission.reply("test")
         rb.cur.execute("select * from replied_entries")
-        before = rb.cur.fetchall()
-        print(before)
+        after_reply = rb.cur.fetchall()
         rb.repopulate_replied_entries()
         rb.cur.execute("select * from replied_entries")
-        after = rb.cur.fetchall()
-        print(after)
+        after_repopulate = rb.cur.fetchall()
+        s = set(after_repopulate)
+        s2 = set(after_reply)
+        diff = list(s ^ s2)
+        assert before_reply == after_reply
+        assert diff == [(3, 's2', 1)]
+
+    @pytest.mark.usefixtures('setup_test_db')
+    def test_repopulate_replied_entries_deleted_reply(self, mock_reddit, amend_os_path_isfile, amend_sqlite3_connect, amend_configparser_read):
+        rb = RedditScanAndReplyBot()
+        rb._praw_config = {
+            'client_id' : 'test_client_id',
+            'client_secret': 'test_client_secret',
+            'password':'test_password',
+            'username':'test_username',
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit',
+            'bot_subreddit': 'mock_botsubreddit',
+            'opt_in_thread': 'https://www.mockreddit.com/r/mock_botsubreddit/comments/8/opt_in_thread/'
+            }
+        rb._database_config = {'database_name':'./path'}
+        rb.setup()
+        rb.reddit.setup_reddit()
+        submission = rb.reddit.get_submissions()[1]
+        submission.reply("test")
+        rb.repopulate_replied_entries()
+        rb.cur.execute("SELECT * FROM replied_entries")
+        after_first_repopulate = rb.cur.fetchall()
+        rb.reddit.user.me().comments.remove_comment('t1_c11')
+        rb.repopulate_replied_entries()
+        rb.cur.execute("SELECT * FROM replied_entries")
+        after_second_repopulate = rb.cur.fetchall()
+        assert after_first_repopulate == after_second_repopulate
+
+    @pytest.mark.usefixtures('setup_test_db')
+    def test_repopulate_replied_entries_two_new_entries(self, mock_reddit, amend_os_path_isfile, amend_sqlite3_connect, amend_configparser_read):
+        rb = RedditScanAndReplyBot()
+        rb._praw_config = {
+            'client_id' : 'test_client_id',
+            'client_secret': 'test_client_secret',
+            'password':'test_password',
+            'username':'test_username',
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit',
+            'bot_subreddit': 'mock_botsubreddit',
+            'opt_in_thread': 'https://www.mockreddit.com/r/mock_botsubreddit/comments/8/opt_in_thread/'
+            }
+        rb._database_config = {'database_name':'./path'}
+        rb.setup()
+        rb.reddit.setup_reddit()
+        rb.cur.execute("SELECT * FROM replied_entries")
+        before_repopulate = rb.cur.fetchall()
+        submission = rb.reddit.get_submissions()[1]
+        submission.reply("test")
+        submission = rb.reddit.get_submissions()[2]
+        submission.reply("test2")
+        rb.repopulate_replied_entries()
+        rb.cur.execute("SELECT * FROM replied_entries")
+        after_repopulate = rb.cur.fetchall()
+        diff = set(before_repopulate) ^ set(after_repopulate)
+        assert sorted(diff) == sorted([(3, 's3', 1), (4, 's2', 1)])

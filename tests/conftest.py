@@ -320,6 +320,15 @@ class MockCommentForest:
     def add_comment(self, comment):
         self._comments.append(comment)
 
+    def remove_comment(self, fullname: str):
+        comments = self._comments
+        new_comments = []
+        for comment in comments:
+            if not comment.fullname == fullname:
+                new_comments.append(comment)
+
+        self._comments = new_comments
+
     def __iter__(self):
         self.n = 0
         return self
