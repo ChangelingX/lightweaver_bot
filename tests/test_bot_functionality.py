@@ -129,7 +129,7 @@ class Test_BotFunctionality:
         assert re.match(expected_regex, post_text)
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_scrape_reddit(self, mock_reddit, amend_sqlite3_connect):
+    def test_scrape_reddit(self, mock_reddit, amend_sqlite3_connect, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -171,7 +171,7 @@ class Test_BotFunctionality:
         assert len(user_post_diff_2) == 0
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_update_opted_in_users(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
+    def test_update_opted_in_users(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -192,7 +192,7 @@ class Test_BotFunctionality:
         assert results == expected_results
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_update_opted_in_users_unenroll(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
+    def test_update_opted_in_users_unenroll(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -217,7 +217,7 @@ class Test_BotFunctionality:
         assert results == expected_results
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_update_opted_in_users_no_change(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
+    def test_update_opted_in_users_no_change(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -241,7 +241,7 @@ class Test_BotFunctionality:
         assert results == expected_results
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_update_opted_in_users_thread_not_found(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
+    def test_update_opted_in_users_thread_not_found(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -260,7 +260,7 @@ class Test_BotFunctionality:
             rb.repopulate_opted_in_users()
 
     @pytest.mark.usefixtures('setup_test_db')
-    def test_updated_replied_entries_simple(self, mock_reddit, amend_os_path_isfile, amend_sqlite3_connect, amend_configparser_read):
+    def test_updated_replied_entries_simple(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -291,7 +291,7 @@ class Test_BotFunctionality:
         assert diff == [(3, 's2', 1)]
 
     @pytest.mark.usefixtures('setup_test_db')
-    def test_repopulate_replied_entries_deleted_reply(self, mock_reddit, amend_os_path_isfile, amend_sqlite3_connect, amend_configparser_read):
+    def test_repopulate_replied_entries_deleted_reply(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -318,7 +318,7 @@ class Test_BotFunctionality:
         assert after_first_repopulate == after_second_repopulate
 
     @pytest.mark.usefixtures('setup_test_db')
-    def test_repopulate_replied_entries_two_new_entries(self, mock_reddit, amend_os_path_isfile, amend_sqlite3_connect, amend_configparser_read):
+    def test_repopulate_replied_entries_two_new_entries(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',

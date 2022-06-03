@@ -1,3 +1,4 @@
+import builtins
 import configparser
 import re
 import praw, prawcore # type: ignore
@@ -535,3 +536,27 @@ def amend_os_path_isfile(mocker):
         return original_func(path, *args, **kwargs)
     
     mocker.patch('os.path.isfile', new=updated_func)
+
+@pytest.fixture
+def amend_os_path_getsize(mocker):
+    original_func = os.path.getsize
+
+    def updated_func(path, *args, **kwargs):
+        if path == './path':
+            return original_func('./tests/test.db')
+        
+        return original_func(path, *args, **kwargs)
+
+    mocker.patch('os.path.getsize', new=updated_func)
+
+@pytest.fixture
+def amend_builtins_open(mocker):
+    original_func = builtins.open
+
+    def updated_func(path, *args, **kwargs):
+        if path == './path':
+            return original_func('./tests/test.db', *args, **kwargs)
+        
+        return original_func(path, *args, **kwargs)
+    
+    mocker.patch('builtins.open', new=updated_func)

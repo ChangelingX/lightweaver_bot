@@ -12,7 +12,7 @@ from util.praw_funcs import (connect_to_reddit, get_comments,  # type: ignore
                              get_submission, get_submissions,
                              get_thread_commenters, get_user_replied_entities,
                              post_comment, scan_entity)
-from util.sql_funcs import (add_replied_entry,  # type: ignore
+from util.sql_funcs import (add_replied_entry, create_database,  # type: ignore
                             get_book_db_entry, get_books, get_opted_in_users,
                             get_replied_entries, get_sql_cursor,
                             update_opted_in_users, update_replied_entry_table)
@@ -68,6 +68,7 @@ class RedditScanAndReplyBot:
         if self.configs['PRAW'] is None:
             raise Exception("No PRAW configuration specified. Cannot connect to Reddit.")
         
+        create_database(self.configs['DATABASE']['database_name'])
         self.cur = self.configs['DATABASE']['database_name']
         self.reddit = self.configs['PRAW']
 
@@ -220,5 +221,6 @@ def main(config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Scrapes reddit for hits on given keywords and posts relevant information as a reply.")
     parser.add_argument('--config', '-c', dest='config', required=True, metavar="./config_file.ini")
+    parser.add_argument('--initialize', '-i', dest='initalize', required=False)
     args = parser.parse_args()
     main(args.config)
