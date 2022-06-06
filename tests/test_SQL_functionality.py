@@ -2,8 +2,8 @@ from importlib.resources import path
 import os
 import sqlite3
 import pytest 
-from reddit_scan_and_reply_bot.RedditScanAndReplyBot import RedditScanAndReplyBot
-from reddit_scan_and_reply_bot.util.sql_funcs import add_opted_in_user, create_database, get_sql_cursor, get_books, get_opted_in_users, get_replied_entries, update_opted_in_users, add_replied_entry, get_book_db_entry, update_replied_entry_table # type: ignore
+from rsarb.RedditScanAndReplyBot import RedditScanAndReplyBot
+from rsarb.util.sql_funcs import add_opted_in_user, create_database, get_sql_cursor, get_books, get_opted_in_users, get_replied_entries, update_opted_in_users, add_replied_entry, get_book_db_entry, update_replied_entry_table # type: ignore
 
 class Test_SQL_functionality:
     @pytest.mark.usefixtures('setup_test_db')
