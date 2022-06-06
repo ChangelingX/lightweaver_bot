@@ -6,7 +6,7 @@ This program will only reply to users who have opted into this bot by posting in
 Usage:
 
 1. Create `config.ini` in a directory accessible by the program.
-2. Run the program with the --initalize switch to initialize the sqlite3 database and check the config file. (`python -m RedditScanAndReplyBot.py --config <config.ini> --initalize`)
+2. Run the program with the --initalize switch to initialize the sqlite3 database. (`python -m RedditScanAndReplyBot.py --config <config.ini> --initalize`)
 3. Enter the relevant information into the `books` table of the sqlite3 database. (See below)
 3. Run the program using `python -m RedditScanAndReplyBot.py --config <config.ini>`
 

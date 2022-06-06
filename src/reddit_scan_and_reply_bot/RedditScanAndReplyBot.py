@@ -3,7 +3,6 @@ import os
 import sqlite3
 import time
 from configparser import ConfigParser, NoSectionError
-from time import sleep
 
 import praw  # type: ignore
 import schedule
@@ -57,6 +56,19 @@ class RedditScanAndReplyBot:
         self._cursor = None
         self._reddit = None
 
+    def initalize_database(self):
+        """
+        Performs first-time setup steps.
+        Creates the database, confirms praw config is correct, ensures that opt-in thread exists.
+        :raises sqlite3.* Exceptions: if the database cannot be created.
+        :raises Exception: if the praw configuration does not return a valid praw.Reddit instance.
+        :raises Exception: if the opt-in thread specified is not found.
+        """
+        try:
+            create_database(self.configs['DATABASE']['database_name'])
+        except (sqlite3.ProgrammingError, sqlite3.OperationalError) as e:
+            raise e 
+        
     def setup(self):
         """
         Connects to SQL database and Reddit using pre-set configuration data.
@@ -67,8 +79,7 @@ class RedditScanAndReplyBot:
         
         if self.configs['PRAW'] is None:
             raise Exception("No PRAW configuration specified. Cannot connect to Reddit.")
-        
-        create_database(self.configs['DATABASE']['database_name'])
+
         self.cur = self.configs['DATABASE']['database_name']
         self.reddit = self.configs['PRAW']
 
@@ -208,19 +219,24 @@ class RedditScanAndReplyBot:
     def cur(self, db_file: str):
         self._cursor = get_sql_cursor(db_file)
 
-def main(config):
+def main(args):
+    config = args.config
+    initalize = args.initialize
     if config is None:
         raise Exception("No configuration file specified.")
     if not os.path.isfile(config):
         raise FileNotFoundError(f"Config file {config} not found.")
-    rb = RedditScanAndReplyBot().from_file(config)
-    rb.setup()
-    rb.repopulate_opted_in_users()
-    rb.run()
+    if initalize:
+        rb = RedditScanAndReplyBot().from_file(config)
+        rb.initalize_database()
+    else:
+        rb = RedditScanAndReplyBot().from_file(config)
+        rb.setup()
+        rb.run()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Scrapes reddit for hits on given keywords and posts relevant information as a reply.")
     parser.add_argument('--config', '-c', dest='config', required=True, metavar="./config_file.ini")
-    parser.add_argument('--initialize', '-i', dest='initalize', required=False)
+    parser.add_argument('--initialize', '-i', dest='initialize', required=False, action='store_true')
     args = parser.parse_args()
-    main(args.config)
+    main(args)

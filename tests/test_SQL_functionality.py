@@ -6,6 +6,7 @@ from reddit_scan_and_reply_bot.RedditScanAndReplyBot import RedditScanAndReplyBo
 from reddit_scan_and_reply_bot.util.sql_funcs import add_opted_in_user, create_database, get_sql_cursor, get_books, get_opted_in_users, get_replied_entries, update_opted_in_users, add_replied_entry, get_book_db_entry, update_replied_entry_table # type: ignore
 
 class Test_SQL_functionality:
+    @pytest.mark.usefixtures('setup_test_db')
     def test_get_sql_cursor(self, amend_sqlite3_connect):
         cur = get_sql_cursor('./path')
         assert isinstance(cur, sqlite3.Cursor)

@@ -163,6 +163,8 @@ def create_database(db_str: str):
     Raises an exception if the file specified exists and is not a sqlite3 database.
     Raises an exception if the file specified exists and does not match the expected schema.
     :param path: str denoting the file path. 
+    :raises sqlite3.OperationalError: If the file specified is not a valid sqlite3 database.
+    :raises sqlite3.ProgrammingError: if the file specified is a database but does not match the expected schema.
     """
 
     if os.path.isfile(db_str):
@@ -212,8 +214,8 @@ def create_database(db_str: str):
         except Exception as exception:
             raise exception
     else: 
-        # create the database.
-        conn = sqlite3.connect(db_str)
+        # create the database. #path2uri uri = True'file:{}?mode=rw'.format(pathname2url(db_str))
+        conn = sqlite3.connect('file:{}?mode=rwc'.format(pathname2url(db_str)), uri=True)
         cur = conn.cursor()
         cur.execute('CREATE TABLE books(id integer PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, author text NOT NULL, isbn text NOT NULL, uri text, summary text not null);')
         cur.execute('CREATE TABLE replied_entries (id integer PRIMARY KEY AUTOINCREMENT, reddit_id TEXT NOT NULL, reply_succeeded_bool integer NOT NULL);')
