@@ -23,7 +23,6 @@ class Test_PRAWFunctionality:
             'test_username',
             'test_user_agent'
         )
-        p.setup_reddit()
         result = get_submissions(p, 'mock_subreddit1+mock_subreddit2')
         expected_result = [
             MockSubmission(p, None, 't3_s1', 'test_author1', 'title', 'selftext', None),
@@ -205,7 +204,6 @@ class Test_PRAWFunctionality:
             'test_username',
             'test_user_agent'
         )
-        p.setup_reddit()
         subreddit = p._subredditForest.subreddit("mock_subreddit1")._subreddits[0]
         submission = subreddit.new(limit=1)[0]
         comment = get_comments(submission)[0]
@@ -223,7 +221,6 @@ class Test_PRAWFunctionality:
             'test_username',
             'test_user_agent'
         )
-        p.setup_reddit()
         subreddit = p._subredditForest.subreddit("mock_subreddit2")._subreddits[0]
         submission = subreddit.new(limit=1)[0]
         comment = get_comments(submission)[0]
@@ -239,7 +236,6 @@ class Test_PRAWFunctionality:
             'test_username',
             'test_user_agent'
         )
-        p.setup_reddit()
         subreddit = p._subredditForest.subreddit("quarantined_subreddit")._subreddits[0]
         submission = subreddit.new(limit=1)[0]
         comment = get_comments(submission)[0]

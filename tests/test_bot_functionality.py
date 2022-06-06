@@ -1,10 +1,12 @@
+import os
 import re
 from unittest.mock import Mock
 import pytest
-import sqlite3 
+import sqlite3
+from reddit_scan_and_reply_bot.util.praw_funcs import get_submission, get_submissions 
 from src.reddit_scan_and_reply_bot.RedditScanAndReplyBot import RedditScanAndReplyBot
 from conftest import MockComment, MockCommentForest, MockReddit
-from src.reddit_scan_and_reply_bot.util.sql_funcs import get_opted_in_users, get_replied_entries
+from src.reddit_scan_and_reply_bot.util.sql_funcs import create_database, get_opted_in_users, get_replied_entries
 
 class Test_BotFunctionality:
 
@@ -129,7 +131,7 @@ class Test_BotFunctionality:
         assert re.match(expected_regex, post_text)
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_scrape_reddit(self, mock_reddit, amend_sqlite3_connect):
+    def test_scrape_reddit(self, mock_reddit, amend_sqlite3_connect, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -142,7 +144,6 @@ class Test_BotFunctionality:
             }
         rb._database_config = {'database_name':'./path'}
         rb.setup()
-        rb.reddit.setup_reddit()
         pre_scrape_replied_entries = get_replied_entries(rb.cur)
         pre_scrape_user_posts = rb.reddit.user.me().comments.new()
 
@@ -171,7 +172,7 @@ class Test_BotFunctionality:
         assert len(user_post_diff_2) == 0
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_update_opted_in_users(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
+    def test_update_opted_in_users(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -192,7 +193,7 @@ class Test_BotFunctionality:
         assert results == expected_results
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_update_opted_in_users_unenroll(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
+    def test_update_opted_in_users_unenroll(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -217,7 +218,7 @@ class Test_BotFunctionality:
         assert results == expected_results
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_update_opted_in_users_no_change(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
+    def test_update_opted_in_users_no_change(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -241,7 +242,7 @@ class Test_BotFunctionality:
         assert results == expected_results
 
     @pytest.mark.usefixtures("setup_test_db")
-    def test_update_opted_in_users_thread_not_found(self, mock_reddit, amend_os_path_isfile, amend_configparser_read, amend_sqlite3_connect):
+    def test_update_opted_in_users_thread_not_found(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -260,7 +261,7 @@ class Test_BotFunctionality:
             rb.repopulate_opted_in_users()
 
     @pytest.mark.usefixtures('setup_test_db')
-    def test_updated_replied_entries_simple(self, mock_reddit, amend_os_path_isfile, amend_sqlite3_connect, amend_configparser_read):
+    def test_updated_replied_entries_simple(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -291,7 +292,7 @@ class Test_BotFunctionality:
         assert diff == [(3, 's2', 1)]
 
     @pytest.mark.usefixtures('setup_test_db')
-    def test_repopulate_replied_entries_deleted_reply(self, mock_reddit, amend_os_path_isfile, amend_sqlite3_connect, amend_configparser_read):
+    def test_repopulate_replied_entries_deleted_reply(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -318,7 +319,7 @@ class Test_BotFunctionality:
         assert after_first_repopulate == after_second_repopulate
 
     @pytest.mark.usefixtures('setup_test_db')
-    def test_repopulate_replied_entries_two_new_entries(self, mock_reddit, amend_os_path_isfile, amend_sqlite3_connect, amend_configparser_read):
+    def test_repopulate_replied_entries_two_new_entries(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
         rb = RedditScanAndReplyBot()
         rb._praw_config = {
             'client_id' : 'test_client_id',
@@ -343,4 +344,46 @@ class Test_BotFunctionality:
         rb.cur.execute("SELECT * FROM replied_entries")
         after_repopulate = rb.cur.fetchall()
         diff = set(before_repopulate) ^ set(after_repopulate)
-        assert sorted(diff) == sorted([(3, 's3', 1), (4, 's2', 1)])
+        names = []
+        for entry in diff:
+            names.append(entry[1])
+        assert sorted(names) == sorted(['s2','s3'])
+
+    def test_initalize_database(self, mock_reddit, amend_os_path_isfile, amend_os_path_getsize, amend_builtins_open, amend_sqlite3_connect, amend_configparser_read):
+        if os.path.isfile('./tests/test.db'):
+            os.remove('./tests/test.db')
+        rb = RedditScanAndReplyBot()
+        rb._praw_config = {
+            'client_id' : 'test_client_id',
+            'client_secret': 'test_client_secret',
+            'password':'test_password',
+            'username':'test_username',
+            'user_agent':'test_user_agent',
+            'subreddits':'mock_subreddit1+mock_subreddit2+quarantined_subreddit',
+            'bot_subreddit': 'mock_botsubreddit',
+            'opt_in_thread': 'https://www.mockreddit.com/r/mock_botsubreddit/comments/6/opt_in_thread/'
+            }
+        rb._database_config = {'database_name':'./path'}
+        rb.initalize_database()
+        conn = sqlite3.connect('./path')
+        cur = conn.cursor()
+        cur.execute('PRAGMA table_info("books")')
+        books_pragma = cur.fetchall()
+        expected_books_pragma = [(0, 'id', 'integer', 0, None, 1), 
+                                (1, 'title', 'TEXT', 1, None, 0), 
+                                (2, 'author', 'text', 1, None, 0), 
+                                (3, 'isbn', 'text', 1, None, 0), 
+                                (4, 'uri', 'text', 0, None, 0), 
+                                (5, 'summary', 'text', 1, None, 0)]
+        assert books_pragma == expected_books_pragma
+        cur.execute('PRAGMA table_info("opted_in_users")')
+        users_pragma = cur.fetchall()
+        expected_users_pragma = [(0, 'id', 'integer', 0, None, 1), 
+                                (1, 'reddit_username', 'TEXT', 1, None, 0)]
+        assert users_pragma == expected_users_pragma
+        cur.execute('PRAGMA table_info("replied_entries")')
+        entries_pragma = cur.fetchall()
+        expected_entries_pragma = [(0, 'id', 'integer', 0, None, 1), 
+                                (1, 'reddit_id', 'TEXT', 1, None, 0), 
+                                (2, 'reply_succeeded_bool', 'integer', 1, None, 0)]
+        assert entries_pragma == expected_entries_pragma

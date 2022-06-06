@@ -1,3 +1,4 @@
+import builtins
 import configparser
 import re
 import praw, prawcore # type: ignore
@@ -26,6 +27,7 @@ class MockReddit:
         self._next_comment_id = 't1_c1'
         self._next_submission_id = 't3_s1'
         self._next_permalink_id = 1
+        self.setup_reddit()
 
     def setup_reddit(self):
         subreddit1 = MockSubreddit(self, 'mock_subreddit1')
@@ -470,7 +472,7 @@ class MockRedditor:
     def reddit(self):
         return self._reddit
 
-#### SQLITE MOCKS ####
+#### SQLITE MOCKS / SETUPS ####
 @pytest.fixture
 def amend_sqlite3_connect(mocker):
     original_func = sqlite3.connect
@@ -478,6 +480,8 @@ def amend_sqlite3_connect(mocker):
     def updated_func(db_name, *args, **kwargs):
         if db_name == './path' or (db_name == 'file:./path?mode=rw' and kwargs['uri'] == True):
             return original_func("file:./tests/test.db?mode=rw", uri=True)
+        if db_name == 'file:./path?mode=rwc' and kwargs['uri'] == True:
+            return original_func("file:./tests/test.db?mode=rwc", uri=True)
         if db_name == './wrong_schema' or (db_name == 'file:./wrong_schema?mode=rw' and kwargs['uri'] == True):
             return original_func("file:./tests/wrong_schema.db?mode=rw", uri=True)
         if db_name == './not-a-db':
@@ -530,8 +534,32 @@ def amend_os_path_isfile(mocker):
 
     def updated_func(path, *args, **kwargs):
         if path == './path':
-            return True
+            return original_func('./tests/test.db', *args, **kwargs)
         
         return original_func(path, *args, **kwargs)
     
     mocker.patch('os.path.isfile', new=updated_func)
+
+@pytest.fixture
+def amend_os_path_getsize(mocker):
+    original_func = os.path.getsize
+
+    def updated_func(path, *args, **kwargs):
+        if path == './path':
+            return original_func('./tests/test.db')
+        
+        return original_func(path, *args, **kwargs)
+
+    mocker.patch('os.path.getsize', new=updated_func)
+
+@pytest.fixture
+def amend_builtins_open(mocker):
+    original_func = builtins.open
+
+    def updated_func(path, *args, **kwargs):
+        if path == './path':
+            return original_func('./tests/test.db', *args, **kwargs)
+        
+        return original_func(path, *args, **kwargs)
+    
+    mocker.patch('builtins.open', new=updated_func)
