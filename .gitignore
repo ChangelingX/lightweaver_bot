@@ -10,5 +10,5 @@ __pycache__
 venv
 venv*
 dist
-src/RedditScanAndReplyBot.egg-info/*
+src/RedditScanAndReplyBot.egg-info/
 reddit_book_bot.code-workspace
