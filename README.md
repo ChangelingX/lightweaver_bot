@@ -43,7 +43,7 @@ The fields should be populated as such:
 
 `client_id` should contain the client ID.
 
-`client_secret' should be the client secret.
+`client_secret` should be the client secret.
 
 `password` is the password of the account to post under.
 
