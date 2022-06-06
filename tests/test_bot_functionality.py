@@ -4,9 +4,9 @@ from unittest.mock import Mock
 import pytest
 import sqlite3
 from rsarb.util.praw_funcs import get_submission, get_submissions 
-from src.rsarb.RedditScanAndReplyBot import RedditScanAndReplyBot
+from rsarb.RedditScanAndReplyBot import RedditScanAndReplyBot
 from conftest import MockComment, MockCommentForest, MockReddit
-from src.rsarb.util.sql_funcs import create_database, get_opted_in_users, get_replied_entries
+from rsarb.util.sql_funcs import create_database, get_opted_in_users, get_replied_entries
 
 class Test_BotFunctionality:
 
