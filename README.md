@@ -29,19 +29,32 @@ opt_in_thread = https://www.reddit.com/r/<subreddit>/comments/<uniquethreadid>/<
 database_name = ./tests/test.db
 ```
 
-The PRAW connection information is under the [PRAW] header. The information for these fields can be found at `https://www.reddit.com/prefs/apps`. To generate the reddit supplied information, click "Create an app" at the bottom of the screen. Instructions on how to complete this form to create an app can be found at `https://github.com/reddit-archive/reddit/wiki/OAuth2-Quick-Start-Example#first-steps`. This application can run only as a 'script' type app. It is recommended that you create an account specifically for this bot to use exclusively.
+The PRAW connection information is under the [PRAW] header. 
+
+The information for these fields can be found at `https://www.reddit.com/prefs/apps`. 
+
+To generate the reddit supplied information, click "Create an app" at the bottom of the screen. Instructions on how to complete this form to create an app can be found at `https://github.com/reddit-archive/reddit/wiki/OAuth2-Quick-Start-Example#first-steps`. 
+
+This application can run only as a 'script' type app. It is recommended that you create an account specifically for this bot to use exclusively.
 
 The fields should be populated as such:
 
-Reddit Provided:
+#### Reddit Provided:
+
 `client_id` should contain the client ID.
+
 `client_secret' should be the client secret.
+
 `password` is the password of the account to post under.
+
 `username` is the username of the account to post under.
 
-User Provided:
+#### User Provided:
+
 `subreddits` should be a string of subreddit names, separated by '+' symbols. This is the list of subreddits that the application will monitor.
+
 `bot_subreddit` should be the subreddit that the bot treats as its "home base". This is the bot that other users will post in to provide feedback and suggest changes on the bot.
+
 `opt_in_thread` should contain the reddit thread that users can reply to in order to subscribe to this bot and receive replies. This URL can be obtained from the reddit "Permalink" function on the given thread.
 
 The sqlite3 database information is under the [DATABASE] header. If this file does not exist, the program will create one and initialize it. The user must manually add appropriate information to the "books" table.
@@ -76,7 +89,8 @@ Summary - A text description of the book. This is stored in the internal databas
 2. Connect to the database using sqlite3. `sqlite3 <database.db>`
 3. Perform an INSERT INTO books query. `INSERT INTO books (title, author, isbn, uri, summary) VALUES ("<title>", "<author>", "<isbn>", "<uri>", "<summary>");`
 
-You will need to escape any single quotes "'" with an additional single quote before it, e.g. "reader's" becomes "reader''s". If any lines have line breaks in them, sqlite3 will preserve these breaks when storing and returning data, and they will be printed. E.g. in the summary field.
+    You will need to escape any single quotes "'" with an additional single quote before it, e.g. "reader's" becomes "reader''s". If any lines have line breaks in them, sqlite3 will preserve these breaks when storing and returning data, and they will be printed. E.g. in the summary field.
 
-4. Once finished entering INSERT statements, submit a `commit;` statement to write all transactions to the database on disk.
-5. type `.q` to exit sqlite3.
+4. Repeat step 3 until all the appropriate books are in the database table.
+5. Once finished entering INSERT statements, submit a `commit;` statement to write all transactions to the database on disk.
+6. type `.q` to exit sqlite3.
