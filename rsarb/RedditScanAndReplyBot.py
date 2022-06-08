@@ -7,11 +7,11 @@ from configparser import ConfigParser, NoSectionError
 import praw  # type: ignore
 import schedule
 
-from util.praw_funcs import (connect_to_reddit, get_comments,  # type: ignore
+from .util.praw_funcs import (connect_to_reddit, get_comments,  # type: ignore
                              get_submission, get_submissions,
                              get_thread_commenters, get_user_replied_entities,
                              post_comment, scan_entity)
-from util.sql_funcs import (add_replied_entry, create_database,  # type: ignore
+from .util.sql_funcs import (add_replied_entry, create_database,  # type: ignore
                             get_book_db_entry, get_books, get_opted_in_users,
                             get_replied_entries, get_sql_cursor,
                             update_opted_in_users, update_replied_entry_table)

@@ -2,9 +2,32 @@
 testpaths = ['tests']
 python_functions = ['test_*', 'it_*']
 pythonpath = [
-    ".","src","rsarb","util", "src/rsarb"
+    ".","rsarb","util"
 ]
 
+[tool.poetry]
+name = "rsarb"
+version = "0.0.9"
+description = "A tool to scrape Reddit for entries in a database, and reply with formatted text based on that entry."
+authors = ["ChangelingX <lee@brightstep.me>"]
+license = "GPL-3.0-or-later"
+readme = "README.md"
+homepage = "https://github.com/ChangelingX/lightweaver_bot"
+repository = "https://github.com/ChangelingX/lightweaver_bot"
+
+
+[tool.poetry.dependencies]
+python = "^3.7"
+praw = ">=7.5"
+schedule = "1.1.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.1.2"
+
 [build-system]
-requires = ["setuptools>=62"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.source]]
+name = "test-pypi"
+url = "https://test.pypi.org/legacy/"

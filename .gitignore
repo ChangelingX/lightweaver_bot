@@ -11,4 +11,5 @@ venv
 venv*
 dist
 src/RedditScanAndReplyBot.egg-info/
+rsarb.egg-info
 reddit_book_bot.code-workspace
