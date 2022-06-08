@@ -2,15 +2,19 @@
 testpaths = ['tests']
 python_functions = ['test_*', 'it_*']
 pythonpath = [
-    ".","src","rsarb","util", "src/rsarb"
+    ".","rsarb","util"
 ]
 
 [tool.poetry]
 name = "rsarb"
-version = "0.0.5"
+version = "0.0.9"
 description = "A tool to scrape Reddit for entries in a database, and reply with formatted text based on that entry."
 authors = ["ChangelingX <lee@brightstep.me>"]
-license = "GPLv3"
+license = "GPL-3.0-or-later"
+readme = "README.md"
+homepage = "https://github.com/ChangelingX/lightweaver_bot"
+repository = "https://github.com/ChangelingX/lightweaver_bot"
+
 
 [tool.poetry.dependencies]
 python = "^3.7"
